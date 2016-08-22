@@ -1,0 +1,139 @@
+[
+	{
+		"name": "FORK",
+		"args": [
+			"pid",
+			"child_pid"
+		],
+		"_description": "Create child process"
+	},
+	{
+		"name": "CLONE",
+		"args": [
+			"pid",
+			"child_pid"
+		],
+		"_description": "Create sib process"
+	},
+	{
+		"name": "SET_CHILD_REAPER",
+		"args": [
+			"pid",
+			"value"
+		],
+		"_description": "Change is child reaper process state"
+	},
+	{
+		"name": "SET_SID",
+		"args": [
+			"pid"
+		],
+		"_description": "Create new session for process"
+	},
+	{
+		"name": "EXIT",
+		"args": [
+			"pid"
+		],
+		"_description": "Terminate process"
+	},
+	{
+		"name": "WAIT",
+		"args": [
+			"pid",
+			"child_pid"
+		],
+		"_description": "Wait child process termination"
+	},
+	{
+		"name": "START_THREAD",
+		"args": [
+			"pid",
+			"tid"
+		],
+		"_description": "Create additional thread for process"
+	},
+	{
+		"name": "OPEN",
+		"args": [
+			"pid",
+			"path",
+			"fd"
+		],
+		"_description": "Open regular file and associate it with fd"
+	},
+	{
+		"name": "CLOSE",
+		"args": [
+			"pid",
+			"fd"
+		],
+		"_description": "Close file descriptor"
+	},
+	{
+		"name": "DUP2",
+		"args": [
+			"pid",
+			"old_fd",
+			"new_fd"
+		],
+		"_description": "Copy old_fd into new_fd"
+	},
+	{
+		"name": "LSEEK",
+		"args": [
+			"pid",
+			"fd",
+			"offset"
+		],
+		"_description": "Set offset for regular file"
+	},
+	{
+		"name": "TRANSFER_FD",
+		"args": [
+			"from_pid",
+			"to_pid",
+			"fd",
+			"target_fd"
+		],
+		"_description": "Transfer fd between processes"
+	},
+	{
+		"name": "MMAP",
+		"args": [
+			"pid",
+			"addr",
+			"length",
+			"fd",
+			"offset",
+			"is_shared"
+		],
+		"_description": "Create memory mapping"
+	},
+	{
+		"name": "MMAP_ANON",
+		"args": [
+			"pid",
+			"addr",
+			"length",
+			"is_shared"
+		],
+		"_description": "Create anonymous memory mapping"
+	},
+	{
+		"name": "MREMAP",
+		"args": [
+			"pid",
+			"addr",
+			"new_addr"
+		],
+		"_description": "Move memory mapping"
+	},
+	{
+		"name": "MUNMAP",
+		"args": [
+			"pid",
+			"addr"
+		]
+	}
+]
