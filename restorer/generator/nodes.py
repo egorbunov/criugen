@@ -1,34 +1,5 @@
 import bisect
 
-class Application(object):
-    def __init__(self, proc):
-        self.root_process = proc
-        self.pid_proc_map = { proc.pid : proc }
-        self.pid_ch_map = { proc.pid : [] } # pid -> children pids
-
-    def get_root_process(self):
-        return self.root_process
-
-    def add_process(self, process):
-        if process.pid in self.pid_proc_map:
-            raise ValueError("Process {} already added".format(process.pid))
-        if process.ppid not in self.pid_proc_map:
-            raise ValueError("Can't add process with ppid {}: add parent process first"
-                             .format(process.ppid))
-        self.pid_proc_map[process.pid] = process
-        # adding as children (children pids are sorted)
-        if process.ppid not in self.pid_ch_map:
-            self.pid_ch_map[process.ppid] = []
-        bisect.insort(self.pid_ch_map[process.ppid], process.pid)
-        # children list is empty
-        self.pid_ch_map[process.pid] = []
-
-    def get_children(self, process):
-        return (self.pid_proc_map[p] for p in self.pid_ch_map[process.pid])
-
-    def get_process_by_pid(self, pid):
-        return self.pid_proc_map[pid]
-
 class TaskState:
     UNDEF = 0x0
     ALIVE = 0x1
@@ -41,7 +12,7 @@ class Process(object):
     def __init__(self, pid, ppid):
         self._pid = int(pid)
         self._ppid = int(ppid)
-        self._descriptors = set()
+        self._file_map = {}
         self._vmas = set()
         self._threads = set()
         self._state = TaskState.UNDEF
@@ -74,19 +45,17 @@ class Process(object):
             raise ValueError("Unknown task state")
         self._state = state
 
-    @property
-    def descriptors(self):
-        return self._descriptors
-    
-    @descriptors.setter
-    def descriptors(self, descriptors):
-        self._descriptors = descriptors
+    def add_file_descriptor(self, fd, file):
+        if not file in self._file_map:
+            self._file_map[file] = set()
+        self._file_map[file].add(fd)
 
-    def add_file_descriptor(self, descriptor):
-        self._descriptors.add(descriptor)
+    def get_files(self):
+        return ( (fd, file) for file, fds in self._file_map.iteritems() 
+                            for fd, file in zip(fds, [file]*len(fds)) )
 
-    def remove_file_descriptor(self, descriptor):
-        self._descriptors.remove(descriptor)
+    def get_fds_by_file(self, file):
+        return self._file_map[file] if file in self._file_map else set()
 
     @property
     def vmas(self):
@@ -116,7 +85,6 @@ class Process(object):
         except StopIteration:
             return None
 
-
     def __str__(self):
         return "Process(pid: {_pid}, ppid: {_ppid})".format(**self.__dict__)
 
@@ -124,40 +92,80 @@ class Process(object):
         return self.__str__()
 
     def __eq__(self, other):
-        return self.pid == other.pid;
+        return self.pid == other.pid; # ok ?
 
     def __hash__(self):
         return self.pid
 
 
+class Application(object):
+    def __init__(self, proc):
+        self.root_process = proc
+        self.pid_proc_map = { proc.pid : proc }
+        self.pid_ch_map = { proc.pid : [] } # pid -> children pids
 
-class FileDescriptor(object):
-    def __init__(self, fd, struct_file):
-        self._fd = fd
-        self._struct_file = struct_file
+    def get_root_process(self):
+        return self.root_process
+
+    def is_root(self, proc):
+        return proc is self.root_process
+
+    def add_process(self, process):
+        if process.pid in self.pid_proc_map:
+            raise ValueError("Process {} already added".format(process.pid))
+        if process.ppid not in self.pid_proc_map:
+            raise ValueError("Can't add process with ppid {}: add parent process first"
+                             .format(process.ppid))
+        self.pid_proc_map[process.pid] = process
+        # adding as children (children pids are sorted)
+        if process.ppid not in self.pid_ch_map:
+            self.pid_ch_map[process.ppid] = []
+        bisect.insort(self.pid_ch_map[process.ppid], process.pid)
+        # children list is empty
+        self.pid_ch_map[process.pid] = []
+
+    def get_children(self, process):
+        return (self.pid_proc_map[p] for p in self.pid_ch_map[process.pid])
+
+    def get_process_by_pid(self, pid):
+        return self.pid_proc_map[pid]
+
+    def get_all_processes(self):
+        return self.pid_proc_map.values()
+
+
+class File(object):
+    ids = set()
+
+    @staticmethod
+    def reset():
+        File.ids = set()
+
+    @staticmethod
+    def next_id():
+        return max(File.ids) + 1 if File.ids else 0
+
+    def __init__(self, id):
+        if id < 0:
+            id = File.next_id()
+        if id in File.ids:
+            raise ValueError("File with id {} already created".format(id))
+        File.ids.add(id)
+        self._id = id
 
     @property
-    def fd(self):
-        return self._fd
+    def id(self):
+        return self._id
+    
 
-    @fd.setter
-    def fd(self, fd):
-        self._fd = fd
-
-    @property
-    def struct_file(self):
-        return self._struct_file
-
-    @struct_file.setter
-    def struct_file(self, struct_file):
-        self._struct_file = struct_file
-
-
-class RegularFile(object):
-    def __init__(self, file_path, size, pos):
+class RegularFile(File):
+    def __init__(self, file_path, size, pos, flags, mode, id = -1):
+        super(RegularFile, self).__init__(id)
         self._file_path = file_path
         self._size = size
         self._pos = pos
+        self._flags = flags
+        self._mode = mode
 
     @property
     def file_path(self):
@@ -185,6 +193,32 @@ class RegularFile(object):
             raise ValueError("Pos should be less than size")
         self._pos = pos
 
+    @property
+    def flags(self):
+        return self._flags
+
+    @property
+    def mode(self):
+        return self._flags
+
+class PipeFile(File):
+    def __init__(self, pipe_id, flags, id = -1):
+        super(PipeFile, self).__init__(id)
+        self._pipe_id = pipe_id
+        self._flags = flags
+
+    @property
+    def id(self):
+        return self._id
+    
+    @property
+    def pipe_id(self):
+        return self._pipe_id
+    
+    @property
+    def flags(self):
+        return self._flags
+    
 
 class Vma:
     def __init__(self,

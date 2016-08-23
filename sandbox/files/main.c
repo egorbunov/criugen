@@ -24,6 +24,12 @@ int main(int argc, char* argv[])
 {
 	int fdp, fdc;
 	pid_t chld;
+        int pipefd[2];
+
+	if (pipe2(pipefd, 0) < 0) {
+		printf("Can't open pipe");
+                exit(1);
+        }
 
 
 	if (argc != 3) {

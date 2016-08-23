@@ -27,7 +27,9 @@ def load_item(source_path, item_name, item_type):
 def load(source_path, item_type):
     processes = []
     pstree_item = load_item(source_path, "pstree", item_type)
-    reg_files = {}
+    files = {}
+
+    # regular files
     file_paths = {}
     reg_files_item = load_item(source_path, "reg-files", item_type)
     for entry in reg_files_item["entries"]:
@@ -37,9 +39,20 @@ def load(source_path, item_type):
             size = None
         else:
             size = entry["size"]
-        rf = nodes.RegularFile(file_paths[entry["name"]], size, entry["pos"])
-        reg_files[entry["id"]] = rf
+        rf = nodes.RegularFile(file_path=file_paths[entry["name"]], 
+                               size=size,
+                               pos=entry["pos"],
+                               flags=entry["flags"],
+                               mode=entry["mode"])
+        files[entry["id"]] = rf
 
+    # pipes
+    pipes_item = load_item(source_path, "pipes", item_type)
+    for entry in pipes_item["entries"]:
+        pf = nodes.PipeFile(pipe_id=entry["pipe_id"], flags=entry["flags"])
+        files[entry["id"]] = pf
+
+    # reading every process specific data
     for entry in pstree_item["entries"]:
         process = nodes.Process(pid = entry["pid"],
                                 ppid = entry["ppid"])
@@ -58,8 +71,7 @@ def load(source_path, item_type):
         files_id = ids_item["entries"][0]["files_id"]
         fd_info_item = load_item(source_path, "fdinfo-{}".format(files_id), item_type)  
         for fd_entry in fd_info_item["entries"]:
-            fd = nodes.FileDescriptor(fd_entry["fd"], reg_files[fd_entry["id"]])
-            process.add_file_descriptor(fd)
+            process.add_file_descriptor(fd_entry["fd"], files[fd_entry["id"]])
 
         mm_item = load_item(source_path, "mm-{}".format(entry["pid"]), item_type)
         vma_items = mm_item["entries"][0]["vmas"]
@@ -84,7 +96,7 @@ def load(source_path, item_type):
                 vma = nodes.Vma(start, end, tmp_files[shmid], None, is_shared)
             elif not is_anon:
                 shmid = vma_item["shmid"]
-                vma = nodes.Vma(start, end, reg_files[shmid].file_path, pgoff, is_shared)
+                vma = nodes.Vma(start, end, files[shmid].file_path, pgoff, is_shared)
             else:
                 vma = nodes.Vma(start, end, None, None, is_shared)
             process.add_vma(vma)

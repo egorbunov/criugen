@@ -123,3 +123,20 @@ class ApplicationView():
         self.processes(indent)
         self.append(")", indent)
         return "\n".join(self.result)
+
+def deep_print(obj, indent = 0):
+    if isinstance(obj, dict):
+        for k, v in obj.iteritems():
+            print '\t' * indent + str(k)
+            deep_print(v, indent + 1)
+        return
+    if hasattr(obj, "__iter__"):
+        for x in iter(obj):
+            deep_print(x, indent + 1)
+        return
+    if not hasattr(obj, "__dict__"):
+        print '\t' * indent + str(obj)
+        return
+    deep_print(obj.__dict__, indent)
+
+
