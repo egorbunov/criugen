@@ -15,6 +15,13 @@ class Cmd():
         }
 
     @staticmethod
+    def setsid(pid):
+        return {
+            "#command" : "SETSID",
+            "pid"      : pid
+        }
+
+    @staticmethod
     def fork_child(pid, child_pid):
         return {
             "#command"   : "FORK_CHILD",
@@ -51,21 +58,20 @@ class Cmd():
         }
 
     @staticmethod
-    def move_fd(pid, old_fd, new_fd):
-        return {
-            "#command"   : "MOVE_FD",
-            "pid"       : pid,
-            "old_fd"    : old_fd,
-            "new_fd"    : new_fd
-        }
-
-    @staticmethod
     def duplicate_fd(pid, old_fd, new_fd):
         return {
             "#command"   : "DUP_FD",
             "pid"       : pid,
             "old_fd"    : old_fd,
             "new_fd"    : new_fd
+        }
+
+    @staticmethod
+    def create_thread(pid, tid):
+        return {
+            "#command" : "CREATE_THREAD",
+            "pid"      : pid,
+            "tid"      : tid
         }
 
 
@@ -87,7 +93,6 @@ class ProgramBuilder():
         # process commands are always placed above child process commands. 
         
         programs = dict([(p.pid, []) for p in app.get_all_processes()])
-
         def add_cmd(proc, cmd):
             programs[proc.pid].append(cmd)
 
