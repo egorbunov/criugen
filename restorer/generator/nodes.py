@@ -13,6 +13,7 @@ class Process(object):
         self._pid = int(pid)
         self._ppid = int(ppid)
         self._file_map = {}
+        self._fdt = {}
         self._vmas = set()
         self._threads = set()
         self._state = TaskState.UNDEF
@@ -46,16 +47,26 @@ class Process(object):
         self._state = state
 
     def add_file_descriptor(self, fd, file):
+        if fd in self._fdt:
+            raise ValueError("File at fd {} already exists".format(fd))
         if not file in self._file_map:
             self._file_map[file] = set()
         self._file_map[file].add(fd)
+        self._fdt[fd] = file
 
     def get_files(self):
-        return ( (fd, file) for file, fds in self._file_map.iteritems() 
-                            for fd, file in zip(fds, [file]*len(fds)) )
+        return self._fdt.iteritems()
 
-    def get_fds_by_file(self, file):
-        return self._file_map[file] if file in self._file_map else set()
+    @property
+    def fdt(self):
+        """ file_descriptor -> File """
+        return self._fdt
+    
+    @property
+    def file_map(self):
+        """ File -> [ file_descriptor ] """
+        return self._file_map
+    
 
     @property
     def vmas(self):
@@ -100,38 +111,40 @@ class Process(object):
 
 class Application(object):
     def __init__(self, proc):
-        self.root_process = proc
-        self.pid_proc_map = { proc.pid : proc }
-        self.pid_ch_map = { proc.pid : [] } # pid -> children pids
+        self._dummy_root_parent = Process(proc.ppid, -1)
+        self._root_process = proc
+        self._pid_proc_map = { proc.pid : proc, self._dummy_root_parent.pid : self._dummy_root_parent }
+        # pid -> children pids
+        self._pid_ch_map = { proc.pid : [], self._dummy_root_parent.pid : [ proc.pid ] } 
 
     def get_root_process(self):
-        return self.root_process
+        return self._root_process
 
-    def is_root(self, proc):
-        return proc is self.root_process
+    def is_root_proc(self, proc):
+        return proc is self._root_process
 
     def add_process(self, process):
-        if process.pid in self.pid_proc_map:
+        if process.pid in self._pid_proc_map:
             raise ValueError("Process {} already added".format(process.pid))
-        if process.ppid not in self.pid_proc_map:
+        if process.ppid not in self._pid_proc_map:
             raise ValueError("Can't add process with ppid {}: add parent process first"
                              .format(process.ppid))
-        self.pid_proc_map[process.pid] = process
+        self._pid_proc_map[process.pid] = process
         # adding as children (children pids are sorted)
-        if process.ppid not in self.pid_ch_map:
-            self.pid_ch_map[process.ppid] = []
-        bisect.insort(self.pid_ch_map[process.ppid], process.pid)
+        if process.ppid not in self._pid_ch_map:
+            self._pid_ch_map[process.ppid] = []
+        bisect.insort(self._pid_ch_map[process.ppid], process.pid)
         # children list is empty
-        self.pid_ch_map[process.pid] = []
+        self._pid_ch_map[process.pid] = []
 
     def get_children(self, process):
-        return (self.pid_proc_map[p] for p in self.pid_ch_map[process.pid])
+        return (self._pid_proc_map[p] for p in self._pid_ch_map[process.pid])
 
     def get_process_by_pid(self, pid):
-        return self.pid_proc_map[pid]
+        return self._pid_proc_map[pid]
 
     def get_all_processes(self):
-        return self.pid_proc_map.values()
+        return [ v for k, v in self._pid_proc_map.iteritems() if v is not self._dummy_root_parent ]
 
 
 class File(object):
@@ -199,7 +212,7 @@ class RegularFile(File):
 
     @property
     def mode(self):
-        return self._flags
+        return self._mode
 
 class PipeFile(File):
     def __init__(self, pipe_id, flags, id = -1):
