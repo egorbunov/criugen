@@ -129,15 +129,15 @@ class ProgramBuilder():
                 cur_files[file].add(fd)
 
             # creating temporary file links not to loose some files during fd fixing
-            # (which may happen during restore)
+            # we don't need to create such link to file if file is already opened at least at
+            # one desired file descriptor
             # it can be avoided by implementing more complex algorithm, but simplicity
             # is better for now
             free_fd = max(proc.fdt) + 1 if proc.fdt else 3 # 3 beacuse 0, 1, 2 are for stds...
             for file in cur_files:
-                if file in proc.file_map:
+                if file in proc.file_map and not proc.file_map[file].intersection(cur_files[file]):
                     add_cmd(proc, Cmd.duplicate_fd(proc.pid, next(iter(cur_files[file])), free_fd))
-                    cur_files[file].add(free_fd)
-                    cur_fdt[free_fd] = file
+                    add_fd(free_fd, file)
                     free_fd += 1
 
             # fixing fds
@@ -167,6 +167,7 @@ class ProgramBuilder():
                     add_fd(fd, file)
 
             # closing everything not opened in cur proc
+            # temporary file links are closed here too
             for fd, file in cur_fdt.iteritems():
                 if fd not in proc.fdt:
                     add_cmd(proc, Cmd.close_fd(proc.pid, fd))

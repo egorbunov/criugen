@@ -1,11 +1,11 @@
 import os
 import json
+import glob
 
 import pycriu
 import nodes
 
-def load_img(imgs_folder, img_name):
-    img_path = os.path.join(imgs_folder, img_name)
+def load_img(img_path):
     with open(img_path, "r") as f:
         try:
             return pycriu.images.load(f, True)
@@ -13,46 +13,63 @@ def load_img(imgs_folder, img_name):
             print("Incorrect magic in {}".format(img_path))
             return None
 
+def load_json(img_path):
+    with open(img_path, "r") as f:
+            return json.load(f)
+
 
 def load_item(source_path, item_name, item_type):
-    if item_type == "json":
-        item_path = os.path.join(source_path, "{}.json".format(item_name))
-        with open(item_path, "r") as f:
-            return json.load(f)
-    elif item_type == "img":
-        return load_img(source_path, "{}.img".format(item_name))
-    raise ValueError("Unknown item_type: {}".format(item_type))
+    loaders = {
+        "img"  : load_img,
+        "json" : load_json 
+    }
+
+    if item_type not in loaders:
+        raise ValueError("Unknown item type {}".format(item_type))
+
+    img_path = os.path.join(source_path, "{}.{}".format(item_name, item_type))
+    return loaders[item_type](img_path)
 
 
 def load(source_path, item_type):
+    available_imgs = [ os.path.splitext(os.path.basename(s))[0] 
+                       for s in glob.glob(os.path.join(source_path, "*.{}".format(item_type))) ]
+    print(available_imgs)
+
     processes = []
-    pstree_item = load_item(source_path, "pstree", item_type)
     files = {}
 
-    # regular files
-    file_paths = {}
-    reg_files_item = load_item(source_path, "reg-files", item_type)
-    for entry in reg_files_item["entries"]:
-        if entry["name"] not in file_paths:
-            file_paths[entry["name"]] = nodes.FilePath(entry["name"])
-        if "size" not in entry:
-            size = None
-        else:
-            size = entry["size"]
-        rf = nodes.RegularFile(file_path=file_paths[entry["name"]], 
-                               size=size,
-                               pos=entry["pos"],
-                               flags=entry["flags"],
-                               mode=entry["mode"])
-        files[entry["id"]] = rf
+    def load_reg_files(img):
+        file_paths = {}
+        reg_files_item = load_item(source_path, img, item_type)
+        for entry in reg_files_item["entries"]:
+            if entry["name"] not in file_paths:
+                file_paths[entry["name"]] = nodes.FilePath(entry["name"])
+            if "size" not in entry:
+                size = None
+            else:
+                size = entry["size"]
+            rf = nodes.RegularFile(file_path=file_paths[entry["name"]], 
+                                   size=size,
+                                   pos=entry["pos"],
+                                   flags=entry["flags"],
+                                   mode=entry["mode"])
+            files[entry["id"]] = rf
 
-    # pipes
-    pipes_item = load_item(source_path, "pipes", item_type)
-    for entry in pipes_item["entries"]:
-        pf = nodes.PipeFile(pipe_id=entry["pipe_id"], flags=entry["flags"])
-        files[entry["id"]] = pf
+    if "reg-files" in available_imgs:
+        load_reg_files("reg-files")
+
+    def load_pipes(img):
+        pipes_item = load_item(source_path, img, item_type)
+        for entry in pipes_item["entries"]:
+            pf = nodes.PipeFile(pipe_id=entry["pipe_id"], flags=entry["flags"])
+            files[entry["id"]] = pf
+
+    if "pipes" in available_imgs:
+        load_pipes("pipes")
 
     # reading every process specific data
+    pstree_item = load_item(source_path, "pstree", item_type)
     for entry in pstree_item["entries"]:
         process = nodes.Process(pid = entry["pid"],
                                 ppid = entry["ppid"])
@@ -64,6 +81,7 @@ def load(source_path, item_type):
         core_item = load_item(source_path, "core-{}".format(entry["pid"]), item_type)
         core_entry = core_item["entries"][0]
         process.state = core_entry["tc"]["task_state"]
+        # ids and mm (and ...) images are not stored for dead process
         if process.state == nodes.TaskState.DEAD:
             continue
 

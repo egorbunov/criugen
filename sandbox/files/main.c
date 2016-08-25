@@ -24,12 +24,12 @@ int main(int argc, char* argv[])
 {
 	int fdp, fdc;
 	pid_t chld;
-        int pipefd[2];
+ //        int pipefd[2];
 
-	if (pipe2(pipefd, 0) < 0) {
-		printf("Can't open pipe");
-                exit(1);
-        }
+	// if (pipe2(pipefd, 0) < 0) {
+	// 	printf("Can't open pipe");
+ //                exit(1);
+ //        }
 
 
 	if (argc != 3) {
@@ -51,6 +51,7 @@ int main(int argc, char* argv[])
 	chld = fork();
 	if (chld < 0) exit(1);
 	if (chld == 0) {
+		close(fdp);
 		fdc = open(argv[2], O_RDWR);
 		if (fdc < 0) exit(1);
 		sleep(50);
