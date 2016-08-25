@@ -34,7 +34,6 @@ def load_item(source_path, item_name, item_type):
 def load(source_path, item_type):
     available_imgs = [ os.path.splitext(os.path.basename(s))[0] 
                        for s in glob.glob(os.path.join(source_path, "*.{}".format(item_type))) ]
-    print(available_imgs)
 
     processes = []
     files = {}
@@ -49,10 +48,11 @@ def load(source_path, item_type):
                 size = None
             else:
                 size = entry["size"]
+            flags = [ s.strip() for s in entry["flags"].split("|") ]
             rf = nodes.RegularFile(file_path=file_paths[entry["name"]], 
                                    size=size,
                                    pos=entry["pos"],
-                                   flags=entry["flags"],
+                                   flags=flags,
                                    mode=entry["mode"])
             files[entry["id"]] = rf
 
@@ -62,7 +62,8 @@ def load(source_path, item_type):
     def load_pipes(img):
         pipes_item = load_item(source_path, img, item_type)
         for entry in pipes_item["entries"]:
-            pf = nodes.PipeFile(pipe_id=entry["pipe_id"], flags=entry["flags"])
+            flags = [ s.strip() for s in entry["flags"].split("|") ]
+            pf = nodes.PipeFile(pipe_id=entry["pipe_id"], flags=flags)
             files[entry["id"]] = pf
 
     if "pipes" in available_imgs:
