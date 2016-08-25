@@ -1,9 +1,9 @@
 BIN_NAME := restorer
 BIN_DIR := ./bin
-CXX := g++
-CXX_FLAGS := -std=c++11 -Wall -Werror -Wextra -pedantic-errors -I "./include" -I "./include/proto"
+CXX := gcc
+CXX_FLAGS := -Wall -Werror -Wextra -pedantic-errors -I "./include" -I "./include/lib"
 LD_FLAGS := -lprotobuf
-SRC_EXT := cpp
+SRC_EXT := c
 SRC_PATH := src
 
 SOURCES = $(shell find $(SRC_PATH) -name '*.$(SRC_EXT)' -printf '%T@\t%p\n' | sort -k 1nr | cut -f2-)

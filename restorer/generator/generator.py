@@ -66,14 +66,6 @@ class Cmd():
             "new_fd"    : new_fd
         }
 
-    @staticmethod
-    def create_thread(pid, tid):
-        return {
-            "#command" : "CREATE_THREAD",
-            "pid"      : pid,
-            "tid"      : tid
-        }
-
 
 class ProgramBuilder():
     def write_program(self, app, program_path):
