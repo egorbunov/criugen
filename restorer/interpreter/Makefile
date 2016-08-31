@@ -2,7 +2,7 @@ BIN_NAME := restorer
 BIN_DIR := ./bin
 CXX := gcc
 CXX_FLAGS := -Wall -Werror -Wextra -pedantic-errors -I "./include" -I "./include/lib"
-LD_FLAGS := -lprotobuf
+LD_FLAGS :=
 SRC_EXT := c
 SRC_PATH := src
 

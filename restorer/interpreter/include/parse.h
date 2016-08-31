@@ -5,8 +5,7 @@
 #include <stdlib.h>
 
 #include "command.h"
-#include "program.h"
 
-int parse_program(const char* ppath, struct program* out_p);
+int parse_program(const char* ppath, command_vec* out_p);
 
 #endif

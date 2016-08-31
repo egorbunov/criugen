@@ -8,13 +8,6 @@ import nodes
 
 class Cmd():
     @staticmethod
-    def fork_root(pid):
-        return {
-            "#command" : "FORK_ROOT",
-            "pid"     : pid
-        }
-
-    @staticmethod
     def setsid(pid):
         return {
             "#command" : "SETSID",
@@ -22,11 +15,12 @@ class Cmd():
         }
 
     @staticmethod
-    def fork_child(pid, child_pid):
+    def fork_child(pid, child_pid, max_fd):
         return {
-            "#command"   : "FORK_CHILD",
+            "#command"  : "FORK_CHILD",
             "pid"       : pid,
-            "child_pid" : child_pid
+            "child_pid" : child_pid,
+            "max_fd"    : max_fd
         }
 
     @staticmethod
@@ -66,7 +60,6 @@ class Cmd():
             "new_fd"    : new_fd
         }
 
-
 class ProgramBuilder():
     def write_program(self, app, program_path):
         program = self.generate_programm(app)
@@ -90,10 +83,8 @@ class ProgramBuilder():
 
         # every process starts it's life after fork
         def forks_dfs(proc):
-            if app.is_root_proc(proc):
-                add_cmd(proc, Cmd.fork_root(proc.pid))
-            else:
-                add_cmd(proc, Cmd.fork_child(proc.ppid, proc.pid))
+            max_fd = max(proc.fdt)
+            add_cmd(proc, Cmd.fork_child(proc.ppid, proc.pid, max_fd))
             for ch in app.get_children(proc):
                 forks_dfs(ch)
 

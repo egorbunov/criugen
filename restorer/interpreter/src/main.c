@@ -2,7 +2,8 @@
 #include <stdlib.h>
 
 #include "parse.h"
-#include "program.h"
+#include "command.h"
+#include "interpreter.h"
 
 void print_usage(void)
 {
@@ -11,19 +12,30 @@ void print_usage(void)
 
 int main(int argc, char* argv[])
 {
-	struct program* p;
+	command_vec program;
+	struct command c;
+	int i;
 
 	if (argc < 2) {
 		print_usage();
 		return 0;
 	}
 
-	p = prog_create();
-	if (parse_program(argv[1], p) < 0) {
+	vec_init(&program);
+	if (parse_program(argv[1], &program) < 0) {
 		printf("Error: can't parse json file with program\n");
 		return -1;		
 	}
-	prog_print(p);
-	prog_delete(p);
+
+	vec_foreach(&program, c, i) {
+		print_cmd(&c);
+	}
+
+	interpreter_run(&program);
+
+	vec_foreach(&program, c, i) {
+		free(c.c);
+	}
+	vec_deinit(&program);
 	return 0;
 }
