@@ -4,16 +4,6 @@
 #include <sys/types.h>
 #include <linux/limits.h>
 
-enum cmd_type
-{
-	CMD_FORK_ROOT,
-	CMD_SETSID,
-	CMD_FORK_CHILD,
-	CMD_REG_OPEN,
-	CMD_CLOSE_FD,
-	CMD_DUPLICATE_FD
-};
-
 struct cmd_fork_root
 {
 	pid_t pid;

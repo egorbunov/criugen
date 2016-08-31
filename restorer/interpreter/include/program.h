@@ -3,10 +3,32 @@
 
 #include "command.h"
 
+enum cmd_type
+{
+	CMD_FORK_ROOT = 0,
+	CMD_SETSID,
+	CMD_FORK_CHILD,
+	CMD_REG_OPEN,
+	CMD_CLOSE_FD,
+	CMD_DUPLICATE_FD,
+	CMD_CREATE_THREAD,
+	CMD_UNKNOWN
+};
+
+#define COMMAND_NUM 20
+
+#define CMD_TAG_FORK_ROOT "FORK_ROOT"
+#define CMD_TAG_SETSID "SETSID"
+#define CMD_TAG_FORK_CHILD "FORK_CHILD"
+#define CMD_TAG_REG_OPEN "REG_OPEN"
+#define CMD_TAG_CLOSE_FD "CLOSE_FD"
+#define CMD_TAG_DUP_FD "DUP_FD"
+#define CMD_TAG_CREATE_THREAD "CREATE_THREAD"
+
 struct command
 {
 	enum cmd_type type;
-	void* payload;
+	void* c; // command
 };
 
 struct program
@@ -32,5 +54,7 @@ struct program* prog_create();
 int prog_add_cmd(struct program*, struct command);
 
 void prog_delete(struct program*);
+
+void prog_print(struct program*);
 
 #endif
