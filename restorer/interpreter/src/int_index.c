@@ -13,23 +13,27 @@ bool index_put(struct int_index* index, int key, int val)
 	struct idx_pair p;
 	p.k = key;
 	p.v = val;
-	if (index_get(index, key) > 0) 
+	if (index_get(index, key, NULL) == 0) // key exists 
 		return false;
 	if (!index->is_init[p.k % TABLE_SIZE])
 		vec_init(&index->chains[p.k % TABLE_SIZE]);
 	return vec_push(&index->chains[p.k % TABLE_SIZE], p) > 0;
 }
 
-int index_get(const struct int_index* index, int key)
+int index_get(const struct int_index* index, int key, int* val)
 {
 	idx_vec chain;
 	struct idx_pair p;
 	int i;
 
 	chain = index->chains[key % TABLE_SIZE];
-	vec_foreach(&chain, p, i)
-		if (p.k == key)
-			return p.v;
+	vec_foreach(&chain, p, i) {
+		if (p.k == key) {
+			if (val != NULL)
+				*val = p.v;
+			return 0;
+		}
+	}
 	return -1;
 }
 

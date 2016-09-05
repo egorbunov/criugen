@@ -77,6 +77,7 @@ enum cmd_type
 struct command
 {
 	enum cmd_type type;
+	pid_t owner; // command runner (interpreter) pid
 	void* c; // command
 };
 

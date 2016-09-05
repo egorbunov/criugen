@@ -16,7 +16,7 @@ all: $(BIN_DIR)/$(BIN_NAME) $(BIN_DIR)/$(ZLOG_CONF)
 .PHONY: clean
 clean:
 	rm -rf $(BIN_DIR)/$(BIN_NAME) $(OBJECTS)
-	rm $(BIN_DIR)/$(ZLOG_CONF) > /dev/null
+	rm -f $(BIN_DIR)/$(ZLOG_CONF)
 
 $(BIN_DIR)/$(BIN_NAME): $(OBJECTS) 
 	@mkdir -p $(BIN_DIR)

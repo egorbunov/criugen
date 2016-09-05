@@ -9,7 +9,7 @@
 
 #include "jsmn.h"
 
-typedef void* (*cmd_parser_fun)(const char*, jsmntok_t*, int);
+typedef struct command (*cmd_parser_fun)(const char*, jsmntok_t*, int tok_num);
 
 static bool read_check_char(FILE* f, char ch, char* c);
 static bool read_one_cmd_str(FILE* f, char* str);
@@ -17,130 +17,154 @@ static bool jsoneq(const char *json, jsmntok_t *tok, const char *s);
 static enum cmd_type parse_cmd_type(const char* str);
 static int parse_open_flag(const char* str);
 
-static void* parse_cmd_setsid(const char* s, jsmntok_t* ts, int n)
+static struct command parse_cmd_setsid(const char* s, jsmntok_t* ts, int n)
 {
 	int i;
-	struct cmd_setsid* cmd;
-	cmd = (struct cmd_setsid*) malloc(sizeof(struct cmd_setsid));
-	if (!cmd)
-		return NULL;
+	struct command cmd = { .type = CMD_UNKNOWN, .owner = -1, .c = NULL };
+	struct cmd_setsid* c;
+	c = (struct cmd_setsid*) malloc(sizeof(struct cmd_setsid));
+	if (!c)
+		return cmd;
 	for (i = 0; i < n; ++i) {
 		if (jsoneq(s, &ts[i], "pid")){
-			cmd->pid = atoi(s + ts[i + 1].start);
+			c->pid = atoi(s + ts[i + 1].start);
 			break;
 		}
 	}
-	return (void*) cmd;
+	cmd.type = CMD_SETSID;
+	cmd.owner = c->pid;
+	cmd.c = c;
+	return cmd;
 }
 
-static void* parse_cmd_fork_child(const char* s, jsmntok_t* ts, int n)
+static struct command parse_cmd_fork_child(const char* s, jsmntok_t* ts, int n)
 {
 	int i;
-	struct cmd_fork_child* cmd;
-	cmd = (struct cmd_fork_child*) malloc(sizeof(struct cmd_fork_child));
-	if (!cmd)
-		return NULL;
+	struct command cmd = { .type = CMD_UNKNOWN, .owner = -1, .c = NULL };
+	struct cmd_fork_child* c;
+	c = (struct cmd_fork_child*) malloc(sizeof(struct cmd_fork_child));
+	if (!c)
+		return cmd;
 	for (i = 0; i < n; ++i) {
 		if (jsoneq(s, &ts[i], "pid"))
-			cmd->pid = atoi(s + ts[i + 1].start);
+			c->pid = atoi(s + ts[i + 1].start);
 		if (jsoneq(s, &ts[i], "child_pid"))
-			cmd->child_pid = atoi(s + ts[i + 1].start);
+			c->child_pid = atoi(s + ts[i + 1].start);
 		if (jsoneq(s, &ts[i], "max_fd"))
-			cmd->max_fd = atoi(s + ts[i + 1].start);
+			c->max_fd = atoi(s + ts[i + 1].start);
 		i++;
 	}
-	return (void*) cmd;
+	cmd.type = CMD_FORK_CHILD;
+	cmd.owner = c->pid;
+	cmd.c = c;
+	return cmd;
 }
 
-static void* parse_cmd_create_thread(const char* s, jsmntok_t* ts, int n)
+static struct command parse_cmd_create_thread(const char* s, jsmntok_t* ts, int n)
 {
 	int i;
-	struct cmd_create_thread* cmd;
-	cmd = (struct cmd_create_thread*) malloc(sizeof(struct cmd_create_thread));
-	if (!cmd)
-		return NULL;
+	struct command cmd = { .type = CMD_UNKNOWN, .owner = -1, .c = NULL };
+	struct cmd_create_thread* c;
+	c = (struct cmd_create_thread*) malloc(sizeof(struct cmd_create_thread));
+	if (!c)
+		return cmd;
 	for (i = 0; i < n; ++i) {
 		if (jsoneq(s, &ts[i], "pid"))
-			cmd->pid = atoi(s + ts[i + 1].start);
+			c->pid = atoi(s + ts[i + 1].start);
 		if (jsoneq(s, &ts[i], "tid"))
-			cmd->tid = atoi(s + ts[i + 1].start);
+			c->tid = atoi(s + ts[i + 1].start);
 		i++;
 	}
-	return (void*) cmd;
+	cmd.type = CMD_CREATE_THREAD;
+	cmd.owner = c->pid;
+	cmd.c = c;
+	return cmd;
 }
 
-static void* parse_cmd_reg_open(const char* s, jsmntok_t* ts, int n)
+static struct command parse_cmd_reg_open(const char* s, jsmntok_t* ts, int n)
 {
 	int i, j;
-	struct cmd_reg_open* cmd;
-	cmd = (struct cmd_reg_open*) malloc(sizeof(struct cmd_reg_open));
-	if (!cmd)
-		return NULL;
+	struct command cmd = { .type = CMD_UNKNOWN, .owner = -1, .c = NULL };
+	struct cmd_reg_open* c;
+	c = (struct cmd_reg_open*) malloc(sizeof(struct cmd_reg_open));
+	if (!c)
+		return cmd;
 	for (i = 0; i < n; ++i) {
 		if (jsoneq(s, &ts[i], "pid")){
-			cmd->pid = atoi(s + ts[i + 1].start);
+			c->pid = atoi(s + ts[i + 1].start);
 			i++;
 		} else if (jsoneq(s, &ts[i], "fd")) {
-			cmd->fd = atoi(s + ts[i + 1].start);
+			c->fd = atoi(s + ts[i + 1].start);
 			i++;
 		} else if (jsoneq(s, &ts[i], "offset")) {
-			cmd->offset = atoi(s + ts[i + 1].start);
+			c->offset = atoi(s + ts[i + 1].start);
 			i++;
 		} else if (jsoneq(s, &ts[i], "mode")) {
-			cmd->mode = atoi(s + ts[i + 1].start);
+			c->mode = atoi(s + ts[i + 1].start);
 			i++;
 		} else if (jsoneq(s, &ts[i], "flags")) {
 			if (ts[i + 1].type != JSMN_ARRAY) {
-				return NULL;
+				return cmd;
 			}
-			cmd->flags = 0;
+			c->flags = 0;
 			for (j = 0; j < ts[i+1].size; j++) {
-				cmd->flags |= parse_open_flag(s + ts[i+j+2].start);
+				c->flags |= parse_open_flag(s + ts[i+j+2].start);
 			}
 			i += ts[i+1].size + 1;
 		} else if (jsoneq(s, &ts[i], "path")) {
-			strncpy(cmd->path, s + ts[i + 1].start, 
+			strncpy(c->path, s + ts[i + 1].start, 
 			        ts[i + 1].end - ts[i + 1].start);
 		}
 
 	}
-	return (void*) cmd;
+	cmd.type = CMD_REG_OPEN;
+	cmd.owner = c->pid;
+	cmd.c = c;
+	return cmd;
 }
 
-static void* parse_cmd_close_fd(const char* s, jsmntok_t* ts, int n)
+static struct command parse_cmd_close_fd(const char* s, jsmntok_t* ts, int n)
 {
 	int i;
-	struct cmd_close_fd* cmd;
-	cmd = (struct cmd_close_fd*) malloc(sizeof(struct cmd_close_fd));
-	if (!cmd)
-		return NULL;
+	struct command cmd = { .type = CMD_UNKNOWN, .owner = -1, .c = NULL };
+	struct cmd_close_fd* c;
+	c = (struct cmd_close_fd*) malloc(sizeof(struct cmd_close_fd));
+	if (!c)
+		return cmd;
 	for (i = 0; i < n; ++i) {
 		if (jsoneq(s, &ts[i], "pid"))
-			cmd->pid = atoi(s + ts[i + 1].start);
+			c->pid = atoi(s + ts[i + 1].start);
 		if (jsoneq(s, &ts[i], "fd"))
-			cmd->fd = atoi(s + ts[i + 1].start);
+			c->fd = atoi(s + ts[i + 1].start);
 		i++;
 	}
-	return (void*) cmd;
+	cmd.type = CMD_CLOSE_FD;
+	cmd.owner = c->pid;
+	cmd.c = c;
+	return cmd;
 }
 
-static void* parse_cmd_duplicate_fd(const char* s, jsmntok_t* ts, int n)
+static struct command parse_cmd_duplicate_fd(const char* s, jsmntok_t* ts, int n)
 {
 	int i;
-	struct cmd_duplicate_fd* cmd;
-	cmd = (struct cmd_duplicate_fd*) malloc(sizeof(struct cmd_duplicate_fd));
-	if (!cmd)
-		return NULL;
+	struct command cmd = { .type = CMD_UNKNOWN, .owner = -1, .c = NULL };
+	struct cmd_duplicate_fd* c;
+	c = (struct cmd_duplicate_fd*) malloc(sizeof(struct cmd_duplicate_fd));
+	if (!c)
+		return cmd;
 	for (i = 0; i < n; ++i) {
 		if (jsoneq(s, &ts[i], "pid"))
-			cmd->pid = atoi(s + ts[i + 1].start);
+			c->pid = atoi(s + ts[i + 1].start);
 		if (jsoneq(s, &ts[i], "new_fd"))
-			cmd->new_fd = atoi(s + ts[i + 1].start);
+			c->new_fd = atoi(s + ts[i + 1].start);
 		if (jsoneq(s, &ts[i], "old_fd"))
-			cmd->old_fd = atoi(s + ts[i + 1].start);
+			c->old_fd = atoi(s + ts[i + 1].start);
 		i++;
 	}
-	return (void*) cmd;
+	cmd.type = CMD_DUPLICATE_FD;
+	cmd.owner = c->pid;
+	cmd.c = c;
+	return cmd;
 }
 
 static cmd_parser_fun cmd_parser_map[COMMAND_NUM] = {
@@ -184,18 +208,16 @@ int parse_program(const char* ppath, command_vec* out_p)
 		// finding command type first
 		ct = CMD_UNKNOWN;
 		for (i = 1; i < tok_num; i++)
-			if (jsoneq(cmd_str, &ts[i], "#command")) {
+			if (jsoneq(cmd_str, &ts[i], "#command"))
 				ct = parse_cmd_type(cmd_str + ts[i + 1].start);
-			}
-			if (ct == CMD_UNKNOWN) {
-				return -1;
-			}
+
+		if (ct == CMD_UNKNOWN)
+			return -1;
 		// parsing command
-			cmd.type = ct;
-			cmd.c = cmd_parser_map[ct](cmd_str, ts + 1, tok_num);
-			if (cmd.c == NULL || vec_push(out_p, cmd) < 0) {
-				return -1;
-			}
+		cmd = cmd_parser_map[ct](cmd_str, ts + 1, tok_num);
+		if (cmd.c == NULL || vec_push(out_p, cmd) < 0)
+			return -1;
+
 		} while (read_check_char(f, ',', &c));
 		if (c != ']')
 			goto err;
