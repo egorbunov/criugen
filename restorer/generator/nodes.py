@@ -117,7 +117,10 @@ class Application(object):
         # pid -> children pids
         self._pid_ch_map = { proc.pid : [], self._dummy_root_parent.pid : [ proc.pid ] } 
 
-    def get_root_process(self):
+    def get_root(self):
+        return self._dummy_root_parent
+
+    def get_real_root(self):
         return self._root_process
 
     def is_root_proc(self, proc):

@@ -54,10 +54,17 @@ class Cmd():
     @staticmethod
     def duplicate_fd(pid, old_fd, new_fd):
         return {
-            "#command"   : "DUP_FD",
+            "#command"  : "DUP_FD",
             "pid"       : pid,
             "old_fd"    : old_fd,
             "new_fd"    : new_fd
+        }
+
+    @staticmethod
+    def fini_cmd(pid):
+        return {
+            "#command" : "FINI_CMD",
+            "pid"      : pid
         }
 
 class ProgramBuilder():
@@ -77,18 +84,10 @@ class ProgramBuilder():
         # So every such part is corresponds to process with some PID. Parent
         # process commands are always placed above child process commands. 
         
-        programs = dict([(p.pid, []) for p in app.get_all_processes()])
-        def add_cmd(proc, cmd):
-            programs[proc.pid].append(cmd)
-
-        # every process starts it's life after fork
-        def forks_dfs(proc):
-            max_fd = max(proc.fdt)
-            add_cmd(proc, Cmd.fork_child(proc.ppid, proc.pid, max_fd))
-            for ch in app.get_children(proc):
-                forks_dfs(ch)
-
-        forks_dfs(app.get_root_process())
+        programs = dict([(int(p.pid), []) for p in app.get_all_processes()])
+        programs[app.get_root().pid] = list()
+        def add_cmd(cmd):
+            programs[int(cmd["pid"])].append(cmd)
 
         # ====== dealing with regular file descriptors =======
         def process_reg_files(proc):
@@ -119,7 +118,7 @@ class ProgramBuilder():
             free_fd = max(proc.fdt) + 1 if proc.fdt else 3 # 3 beacuse 0, 1, 2 are for stds...
             for file in cur_files:
                 if file in proc.file_map and not proc.file_map[file].intersection(cur_files[file]):
-                    add_cmd(proc, Cmd.duplicate_fd(proc.pid, next(iter(cur_files[file])), free_fd))
+                    add_cmd(Cmd.duplicate_fd(proc.pid, next(iter(cur_files[file])), free_fd))
                     add_fd(free_fd, file)
                     free_fd += 1
 
@@ -132,32 +131,46 @@ class ProgramBuilder():
 
                 if fd in cur_fdt and cur_fdt[fd] != file:
                     if file not in cur_files:
-                        add_cmd(proc, Cmd.close_fd(proc.pid, fd))
-                        add_cmd(proc, Cmd.reg_open(proc.pid, fd, file))
+                        add_cmd(Cmd.close_fd(proc.pid, fd))
+                        add_cmd(Cmd.reg_open(proc.pid, fd, file))
                     else:
                         ofd = next(iter(cur_files[file]))
-                        add_cmd(proc, Cmd.duplicate_fd(proc.pid, ofd, fd))
+                        add_cmd(Cmd.duplicate_fd(proc.pid, ofd, fd))
                     del_fd(fd)
                     add_fd(fd, file)
 
                 elif fd not in cur_fdt and proc.fdt[fd] in cur_files:
                     ofd = next(iter(cur_files[file]))
-                    add_cmd(proc, Cmd.duplicate_fd(proc.pid, ofd, fd))
+                    add_cmd(Cmd.duplicate_fd(proc.pid, ofd, fd))
                     add_fd(fd, file)
 
                 elif fd not in cur_fdt and proc.fdt[fd] not in cur_files:
-                    add_cmd(proc, Cmd.reg_open(proc.pid, fd, file))
+                    add_cmd(Cmd.reg_open(proc.pid, fd, file))
                     add_fd(fd, file)
 
             # closing everything not opened in cur proc
             # temporary file links are closed here too
             for fd, file in cur_fdt.iteritems():
                 if fd not in proc.fdt:
-                    add_cmd(proc, Cmd.close_fd(proc.pid, fd))
+                    add_cmd(Cmd.close_fd(proc.pid, fd))
         # ========= reg_files processing end =========
 
         for p in app.get_all_processes():
             process_reg_files(p)
+
+        # adding child forking as last command to every process program
+        def forks_dfs(proc):
+            max_fd = max(proc.fdt)
+            add_cmd(Cmd.fork_child(proc.ppid, proc.pid, max_fd))
+            for ch in app.get_children(proc):
+                forks_dfs(ch)
+
+        forks_dfs(app.get_real_root())
+
+        # adding fini command
+        for p in app.get_all_processes():
+            add_cmd(Cmd.fini_cmd(p.pid))
+
 
         # concatenate per process programs into final one
         def concat_programs(proc, program = []):
@@ -166,7 +179,7 @@ class ProgramBuilder():
                 concat_programs(ch, program)
             return program
 
-        return concat_programs(app.get_root_process())
+        return concat_programs(app.get_root())
 
 
 
