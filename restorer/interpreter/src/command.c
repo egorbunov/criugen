@@ -2,38 +2,76 @@
 
 #include <stdio.h>
 
+static void sprint_cmd_setsid(char* buf, const void* cmd)
+{
+	struct cmd_setsid* c = (struct cmd_setsid*) cmd;
+	sprintf(buf, "{ cmd: %s, pid: %d }", CMD_TAG_SETSID, c->pid);
+}
+
+static void sprint_cmd_fork_child(char* buf, const void* cmd)
+{
+	struct cmd_fork_child* c = (struct cmd_fork_child*) cmd;
+	sprintf(buf, "{ cmd: %s, pid: %d, child_pid: %d, max_fd: %d }", 
+		     CMD_TAG_FORK_CHILD, c->pid, c->child_pid, c->max_fd);
+}
+
+static void sprint_cmd_reg_open(char* buf, const void* cmd)
+{
+	struct cmd_reg_open* c = (struct cmd_reg_open*) cmd;
+	sprintf(buf, "{ cmd: %s, pid: %d, fd: %d, path: %s, "\
+	              "flags: %d, mode: %d, offset: %d",
+	             CMD_TAG_REG_OPEN, c->pid, c->fd, c->path,
+	             c->flags, c->mode, c->offset);
+}
+
+static void sprint_cmd_close_fd(char* buf, const void* cmd)
+{
+	struct cmd_close_fd* c = (struct cmd_close_fd*) cmd;
+	sprintf(buf, "{ cmd: %s, pid: %d, fd: %d }", 
+		     CMD_TAG_CLOSE_FD, c->pid, c->fd);
+}
+
+static void sprint_cmd_duplicate_fd(char* buf, const void* cmd)
+{
+	struct cmd_duplicate_fd* c = (struct cmd_duplicate_fd*) cmd;
+	sprintf(buf, "{ cmd: %s, pid: %d, old_fd: %d, new_fd: %d }", 
+		     CMD_TAG_DUP_FD, c->pid, c->old_fd, c->new_fd);
+}
+
+static void sprint_cmd_create_thread(char* buf, const void* cmd)
+{
+	struct cmd_create_thread* c = (struct cmd_create_thread*) cmd;
+	sprintf(buf, "{ cmd: %s, pid: %d, tid: %d }", 
+		     CMD_TAG_CREATE_THREAD, c->pid, c->tid);
+}
+
+static void sprint_cmd_fini(char* buf, const void* cmd)
+{
+	struct cmd_fini* c = (struct cmd_fini*) cmd;
+	sprintf(buf, "{ cmd: %s, pid: %d }", CMD_TAG_FINI, c->pid);
+}
+
+typedef void (*cmd_printer)(char*, const void*);
+
+static cmd_printer command_printers[COMMAND_NUM] = {
+	[CMD_FORK_CHILD] = sprint_cmd_fork_child,
+	[CMD_SETSID] = sprint_cmd_setsid,
+	[CMD_REG_OPEN] = sprint_cmd_reg_open,
+	[CMD_CLOSE_FD] = sprint_cmd_close_fd,
+	[CMD_DUPLICATE_FD] = sprint_cmd_duplicate_fd,
+	[CMD_CREATE_THREAD] = sprint_cmd_create_thread,
+	[CMD_FINI] = sprint_cmd_fini
+};
+
+char* sprint_cmd(char* buf, enum cmd_type type, void* cmd)
+{
+	command_printers[type](buf, cmd);
+	return buf;
+}
+
 void print_cmd(const struct command* c)
 {
-	printf("{\n");
-	if (c->type == CMD_SETSID) {
-		printf("\tcmd: %s,\n", CMD_TAG_SETSID);
-		printf("\tpid: %d", ((struct cmd_setsid*) c->c)->pid);
-	} else if (c->type == CMD_FORK_CHILD) {
-		printf("\tcmd: %s,\n", CMD_TAG_FORK_CHILD);
-		printf("\tpid: %d,\n", ((struct cmd_fork_child*) c->c)->pid);
-		printf("\tchild_pid: %d,\n", ((struct cmd_fork_child*) c->c)->child_pid);
-		printf("\tmax_fd: %d\n", ((struct cmd_fork_child*) c->c)->max_fd);
-	} else if (c->type == CMD_REG_OPEN) {
-		printf("\tcmd: %s,\n", CMD_TAG_REG_OPEN);
-		printf("\tpid: %d,\n", ((struct cmd_reg_open*) c->c)->pid);
-		printf("\tfd: %d,\n", ((struct cmd_reg_open*) c->c)->fd);
-		printf("\tpath: %s,\n", ((struct cmd_reg_open*) c->c)->path);
-		printf("\tflags: %d,\n", ((struct cmd_reg_open*) c->c)->flags);
-		printf("\tmode: %d,\n", ((struct cmd_reg_open*) c->c)->mode);
-		printf("\toffset: %d,\n", ((struct cmd_reg_open*) c->c)->offset);
-	} else if (c->type == CMD_CLOSE_FD) {
-		printf("\tcmd: %s,\n", CMD_TAG_CLOSE_FD);
-		printf("\tpid: %d,\n", ((struct cmd_close_fd*) c->c)->pid);
-		printf("\tfd: %d", ((struct cmd_close_fd*) c->c)->fd);
-	} else if (c->type == CMD_DUPLICATE_FD) {
-		printf("\tcmd: %s,\n", CMD_TAG_DUP_FD);
-		printf("\tpid: %d,\n", ((struct cmd_duplicate_fd*) c->c)->pid);
-		printf("\told_fd: %d,\n", ((struct cmd_duplicate_fd*) c->c)->old_fd);
-		printf("\tnew_fd: %d,\n", ((struct cmd_duplicate_fd*) c->c)->new_fd);
-	} else if (c->type == CMD_CREATE_THREAD) {
-		printf("\tcmd: %s,\n", CMD_TAG_CREATE_THREAD);
-		printf("\tpid: %d,\n", ((struct cmd_create_thread*) c->c)->pid);
-		printf("\ttid: %d", ((struct cmd_create_thread*) c->c)->tid);
-	}
-	printf("\n}\n");
+	char buf[4000];
+	command_printers[c->type](buf, c->c);
+	printf("%s", buf);
 }

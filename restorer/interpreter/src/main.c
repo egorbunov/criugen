@@ -1,17 +1,15 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <linux/limits.h>
-
-#include <zlog.h>
 #include <libgen.h>
+
+#include <linux/limits.h>
+#include <unistd.h>
 
 #include "parse.h"
 #include "command.h"
 #include "interpreter.h"
-
-// global logging category
-zlog_category_t* g_log;
+#include "log.h"
 
 void print_usage(void)
 {
@@ -32,14 +30,9 @@ int main(int argc, char* argv[])
 
 	// init logging
 	sprintf(buf, "%s/zlog.conf", dirname(argv[0]));
-	if (zlog_init(buf)) {
+	if (log_init(buf)) {
 		printf("Error initializing log\n");
 		printf("Config file path: %s\n", buf);
-		return -1;
-	}
-	g_log = zlog_get_category("interpreter_cat");
-	if (!g_log) {
-		printf("Error getting log category %s", "interpreter_cat");
 		return -1;
 	}
 	
@@ -57,7 +50,8 @@ int main(int argc, char* argv[])
 		free(c.c);
 	}
 	vec_deinit(&program);
-	zlog_fini();
+
+	log_fini();
 
 	return 0;
 }

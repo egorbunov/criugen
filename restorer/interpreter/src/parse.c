@@ -167,13 +167,33 @@ static struct command parse_cmd_duplicate_fd(const char* s, jsmntok_t* ts, int n
 	return cmd;
 }
 
+static struct command parse_cmd_fini(const char* s, jsmntok_t* ts, int n)
+{
+	int i;
+	struct command cmd = { .type = CMD_UNKNOWN, .owner = -1, .c = NULL };
+	struct cmd_fini* c;
+	c = (struct cmd_fini*) malloc(sizeof(struct cmd_fini));
+	if (!c)
+		return cmd;
+	for (i = 0; i < n; ++i) {
+		if (jsoneq(s, &ts[i], "pid"))
+			c->pid = atoi(s + ts[i + 1].start);
+		i++;
+	}
+	cmd.type = CMD_FINI;
+	cmd.owner = c->pid;
+	cmd.c = c;
+	return cmd;
+}
+
 static cmd_parser_fun cmd_parser_map[COMMAND_NUM] = {
 	[CMD_FORK_CHILD] = parse_cmd_fork_child,
 	[CMD_SETSID] = parse_cmd_setsid,
 	[CMD_REG_OPEN] = parse_cmd_reg_open,
 	[CMD_CLOSE_FD] = parse_cmd_close_fd,
 	[CMD_DUPLICATE_FD] = parse_cmd_duplicate_fd,
-	[CMD_CREATE_THREAD] = parse_cmd_create_thread
+	[CMD_CREATE_THREAD] = parse_cmd_create_thread,
+	[CMD_FINI] = parse_cmd_fini
 };
 
 int parse_program(const char* ppath, command_vec* out_p)
@@ -243,6 +263,8 @@ int parse_program(const char* ppath, command_vec* out_p)
 			return CMD_DUPLICATE_FD;
 		if (strncmp(str, CMD_TAG_CLOSE_FD, strlen(CMD_TAG_CLOSE_FD)) == 0)
 			return CMD_CLOSE_FD;
+		if (strncmp(str, CMD_TAG_FINI, strlen(CMD_TAG_FINI)) == 0)
+			return CMD_FINI;
 		return CMD_UNKNOWN;
 	}
 

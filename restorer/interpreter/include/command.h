@@ -51,9 +51,15 @@ struct cmd_duplicate_fd
 	int new_fd;
 };
 
+struct cmd_fini
+{
+	pid_t pid;
+};
+
 // commands utils and wrapper for IPC
 
 #define COMMAND_NUM 20
+#define COMMAND_MAX_SIZE 6000
 
 #define CMD_TAG_FORK_ROOT "FORK_ROOT"
 #define CMD_TAG_SETSID "SETSID"
@@ -62,6 +68,7 @@ struct cmd_duplicate_fd
 #define CMD_TAG_CLOSE_FD "CLOSE_FD"
 #define CMD_TAG_DUP_FD "DUP_FD"
 #define CMD_TAG_CREATE_THREAD "CREATE_THREAD"
+#define CMD_TAG_FINI "FINI_CMD"
 
 enum cmd_type
 {
@@ -71,6 +78,7 @@ enum cmd_type
 	CMD_CLOSE_FD,
 	CMD_DUPLICATE_FD,
 	CMD_CREATE_THREAD,
+	CMD_FINI,
 	CMD_UNKNOWN
 };
 
@@ -84,6 +92,7 @@ struct command
 typedef vec_t(struct command) command_vec;
 
 
+char* sprint_cmd(char* buf, enum cmd_type type, void* cmd);
 void print_cmd(const struct command* cmd);
 
 

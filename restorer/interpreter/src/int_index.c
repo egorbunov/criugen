@@ -1,5 +1,7 @@
 #include "int_index.h"
 
+#include "log.h"
+
 void index_init(struct int_index* index)
 {
 	int i;
@@ -11,13 +13,19 @@ void index_init(struct int_index* index)
 bool index_put(struct int_index* index, int key, int val)
 {
 	struct idx_pair p;
+	int ret;
+
 	p.k = key;
 	p.v = val;
-	if (index_get(index, key, NULL) == 0) // key exists 
+	if (index_get(index, key, NULL) == 0)// key exists
 		return false;
-	if (!index->is_init[p.k % TABLE_SIZE])
+	if (!index->is_init[p.k % TABLE_SIZE]) {
 		vec_init(&index->chains[p.k % TABLE_SIZE]);
-	return vec_push(&index->chains[p.k % TABLE_SIZE], p) > 0;
+		index->is_init[p.k % TABLE_SIZE] = true;
+	}
+	
+	ret = vec_push(&index->chains[p.k % TABLE_SIZE], p);
+	return ret == 0;
 }
 
 int index_get(const struct int_index* index, int key, int* val)
