@@ -9,6 +9,7 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <sys/socket.h>
+#include <sys/wait.h>
 
 #include "int_index.h"
 #include "ipc.h"
@@ -37,6 +38,16 @@ static int command_sizes[COMMAND_NUM] = {
 static int interpreter_worker(int max_fd);
 static int send_command(int sock_fd, const struct command*);
 
+static void sigchld_handler(int sig)
+{
+    pid_t p;
+    int status;
+    while ((p = waitpid(-1, &status, WNOHANG)) != -1) {
+    	log_info("Child dead [ %d ] catched", p);
+    }
+    (void) sig;
+}
+
 /**
  * Master interpreter procedure, which responsible for
  * sending commands to interpreter-workers -- processes
@@ -47,7 +58,7 @@ static int send_command(int sock_fd, const struct command*);
 int interpreter_run(const command_vec* p)
 {
 	int ret = 0;
-	
+
 	struct int_index pid_idx;  // pid -> id (0, ...)
 	vec_int_t id_pid_map; // id -> pid
 	vec_int_t server_socks; // socket fds
@@ -57,6 +68,13 @@ int interpreter_run(const command_vec* p)
 	struct command cmd;
 	int srv_fd;
 	int conn_fd;
+
+	struct sigaction sa;
+	memset(&sa, 0, sizeof(sa));
+	sa.sa_handler = sigchld_handler;
+	if (sigaction(SIGCHLD, &sa, NULL) < 0) {
+		log_stderr("Can't setup child handler");
+	}
 
 	vec_init(&id_pid_map);
 	vec_init(&server_socks);
@@ -233,6 +251,13 @@ static int interpreter_worker(int max_fd)
 	char buf[5000];
 	char cmd_buf[COMMAND_MAX_SIZE];
 
+	struct sigaction sa;
+	memset(&sa, 0, sizeof(sa));
+	sa.sa_handler = sigchld_handler;
+	if (sigaction(SIGCHLD, &sa, NULL) < 0) {
+		log_stderr("Can't setup child handler");
+	}
+
 	free_fd = max_fd + 1;
 	ret = 0;
 
@@ -291,7 +316,7 @@ static int interpreter_worker(int max_fd)
 			log_info("Finilizing interpreter...");
 			close(conn_fd);
 			sleep(FINI_SLEEP_TIME);
-		} else {
+		} else { // generic command evaluation
 			if ((ret = evaluators[cmd_type]((void*) cmd_buf)) < 0) {
 				log_error("Command [%d] evaluation failed", cmd_type);
 				goto exit;
@@ -312,6 +337,10 @@ static int eval_cmd_setsid(void* cmd)
 	(void) c;
 
 	log_info("Evaluating setsid...");
+	if (setsid() < 0) {
+		log_stderr("Can't setsid");
+		return -1;
+	}
 
 	return 0;
 }

@@ -89,6 +89,9 @@ class ProgramBuilder():
         def add_cmd(cmd):
             programs[int(cmd["pid"])].append(cmd)
 
+        # ====== setsid root process ===== TODO: does is always makes sense?
+        add_cmd(Cmd.setsid(app.get_real_root().pid));
+        
         # ====== dealing with regular file descriptors =======
         def process_reg_files(proc):
             par = app.get_process_by_pid(proc.ppid)
