@@ -17,6 +17,10 @@
 #include "log.h"
 #include "io_utils.h"
 
+
+// TODO: that is temporary
+#define FINI_SLEEP_TIME 200
+
 typedef int pipe_t[2];
 typedef vec_t(pipe_t) vec_pipes;
 
@@ -74,7 +78,8 @@ int interpreter_run(const command_vec* p)
 			child = ((struct cmd_fork_child*) cmd.c)->child_pid;
 			id = id_pid_map.length;
 
-			log_info("Got fork command; child = %d; parent = %d", child, cmd.owner);
+			log_info("Got fork command; child = %d; parent = %d", 
+				 child, cmd.owner);
 			
 			// opening socket for ipc with child interpreter proc
 			srv_fd = socket_open(child);
@@ -151,7 +156,8 @@ int interpreter_run(const command_vec* p)
 			}
 		} else {
 			// just delegating command evaluation
-			log_info("Sending command [ %d ] to [ %d (id = %d) ] through socket [ %d ]", 
+			log_info("Sending command [ %d ] to [ %d (id = %d) ] "\
+				 "through socket [ %d ]", 
 				 cmd.type, cmd.owner, owner_id, conn_fd);
 			conn_fd = connections.data[owner_id];
 			send_command(conn_fd, &cmd);
@@ -171,7 +177,7 @@ exit:
 	vec_deinit(&server_socks);
 	vec_deinit(&connections);
 
-	sleep(100);
+	sleep(FINI_SLEEP_TIME);
 
 	return ret;
 }
@@ -284,7 +290,7 @@ static int interpreter_worker(int max_fd)
 		} else if (cmd_type == CMD_FINI) {
 			log_info("Finilizing interpreter...");
 			close(conn_fd);
-			sleep(100);
+			sleep(FINI_SLEEP_TIME);
 		} else {
 			if ((ret = evaluators[cmd_type]((void*) cmd_buf)) < 0) {
 				log_error("Command [%d] evaluation failed", cmd_type);
@@ -320,12 +326,15 @@ static int eval_cmd_reg_open(void* cmd)
 		log_stderr("Can't open file");
 		return -1;
 	}
+	log_info("opened reg file at [ %d ]; moving to [ %d ]", fd, c->fd);
 	if (move_fd(fd, c->fd) < 0) {
 		log_stderr("Can't move fd");
 		return -1;
 	}
-
-	// todo LSEEK
+	if (lseek(c->fd, c->offset, SEEK_SET) < 0) {
+		log_stderr("Can't set offset");
+		return -1;
+	}
 	return 0;
 }
 
@@ -333,7 +342,8 @@ static int eval_cmd_duplicate_fd(void* cmd)
 {
 	struct cmd_duplicate_fd* c = (struct cmd_duplicate_fd*) cmd;
 	if (dup2(c->old_fd, c->new_fd) < 0) {
-		log_error("Can't dup fd [ %d ] to [ %d ] [ %s ]", c->old_fd, c->new_fd, strerror(errno));
+		log_error("Can't dup fd [ %d ] to [ %d ] [ %s ]", 
+			  c->old_fd, c->new_fd, strerror(errno));
 		return -1;
 	}
 	return 0;

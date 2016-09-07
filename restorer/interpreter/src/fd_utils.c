@@ -8,10 +8,11 @@
 
 int move_fd(int old_fd, int new_fd)
 {
-	if (fcntl(new_fd, F_GETFD) > 0 || errno != EBADF) {
+	if (old_fd == new_fd)
+		return 0;
+	if (fcntl(new_fd, F_GETFD) > 0 || errno != EBADF)
 		return -1;
-	}
 	if (dup2(old_fd, new_fd) < 0 || close(old_fd) < 0) 
 		return -2;
-	return 0;
+	return 0;	
 }
