@@ -4,7 +4,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#include "command.h"
+#include "command/command.h"
 
 int parse_program(const char* ppath, command_vec* out_p);
 

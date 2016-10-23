@@ -1,9 +1,12 @@
 #include "interpreter.h"
 
-#include <stdio.h>
-#include <errno.h>
-#include <assert.h>
-#include <string.h>
+#include <map>
+#include <vector>
+
+#include <cstdio>
+#include <cerrno>
+#include <cassert>
+#include <cstring>
 
 #include <unistd.h>
 #include <sys/stat.h>
@@ -11,29 +14,15 @@
 #include <sys/socket.h>
 #include <sys/wait.h>
 
-#include "int_index.h"
 #include "ipc.h"
 #include "fd_utils.h"
 #include "pid_utils.h"
 #include "log.h"
 #include "io_utils.h"
-
+#include "command/command_print.h"
 
 // TODO: that is temporary
 #define FINI_SLEEP_TIME 200
-
-typedef int pipe_t[2];
-typedef vec_t(pipe_t) vec_pipes;
-
-static int command_sizes[COMMAND_NUM] = {
-	[CMD_FORK_CHILD] = sizeof(struct cmd_fork_child),
-	[CMD_SETSID] = sizeof(struct cmd_setsid),
-	[CMD_REG_OPEN] = sizeof(struct cmd_reg_open),
-	[CMD_CLOSE_FD] = sizeof(struct cmd_close_fd),
-	[CMD_DUPLICATE_FD] = sizeof(struct cmd_duplicate_fd),
-	[CMD_CREATE_THREAD] = sizeof(struct cmd_create_thread),
-	[CMD_FINI] = sizeof(struct cmd_fini)
-};
 
 static int interpreter_worker(int max_fd);
 static int send_command(int sock_fd, const struct command*);
@@ -48,53 +37,50 @@ static void sigchld_handler(int sig)
     (void) sig;
 }
 
-/**
- * Master interpreter procedure, which responsible for
- * sending commands to interpreter-workers -- processes
- * from restoring process tree, who will evaluate commands
- * and restore themselves
- * @param  p command list
- */
-int interpreter_run(const command_vec* p)
+static int setup_child_handler()
 {
-	int ret = 0;
-
-	struct int_index pid_idx;  // pid -> id (0, ...)
-	vec_int_t id_pid_map; // id -> pid
-	vec_int_t server_socks; // socket fds
-	vec_int_t connections; // connection fds
-	
-	int i;	
-	struct command cmd;
-	int srv_fd;
-	int conn_fd;
-
 	struct sigaction sa;
 	memset(&sa, 0, sizeof(sa));
 	sa.sa_handler = sigchld_handler;
+	return sigaction(SIGCHLD, &sa, NULL);
 	if (sigaction(SIGCHLD, &sa, NULL) < 0) {
 		log_stderr("Can't setup child handler");
 	}
+}
 
-	vec_init(&id_pid_map);
-	vec_init(&server_socks);
-	vec_init(&connections);
+int interpreter_run(const command* program, int len)
+{
+	// server socket fd for every interpreter-worker
+	std::map<pid_t, int> server_socks; 
+	// connection fd for every interpreter-worker
+	std::map<pid_t, int> connections;
+	// service file descriptors
+	int srv_fd = -1;
+	int conn_fd = -1;
 
-	vec_foreach(p, cmd, i) {
-		int owner_id;
+	auto cleanup_fun = 
+	[&srv_fd, &conn_fd, &server_socks, &connections](int ret_code) {
+		for (const auto& p : server_socks)
+			close(p.second);
+		server_socks.clear();
+		for (const auto& p : connections)
+			close(p.second);
+		connections.clear();
+		close(srv_fd);
+		close(conn_fd);
+		return ret_code;
+	};
+	
+	if (setup_child_handler()) {
+		log_stderr("Can't setup child handler");
+	}                             
 
-		if (cmd.owner != 0 && index_get(&pid_idx, cmd.owner, &owner_id) < 0) {
-			log_error("Can't find cmd owner id, pid = %d", cmd.owner);
-			ret = -1;
-			goto exit;
-		}
+	for(int i = 0; i < len; ++i) {
+		const command& cmd = program[i];
 
-		if (cmd.type == CMD_FORK_CHILD) {
-			pid_t child;
-			int id;
-
-			child = ((struct cmd_fork_child*) cmd.c)->child_pid;
-			id = id_pid_map.length;
+		if (cmd.type == CMD_FORK_CHILD && cmd.owner == 0) {
+			struct cmd_fork_child fork_cmd = *static_cast<struct cmd_fork_child*>(cmd.c);
+			pid_t child = fork_cmd.child_pid;
 
 			log_info("Got fork command; child = %d; parent = %d", 
 				 child, cmd.owner);
@@ -103,118 +89,65 @@ int interpreter_run(const command_vec* p)
 			srv_fd = socket_open(child);
 			if (srv_fd < 0) {
 				log_error("Can't open socket for pid %d", child);
-				ret = -1;
-				goto exit;
+				return cleanup_fun(-1);
 			}
 
-			if (cmd.owner == 0) {
-				pid_t pid;
-				log_info("Forking child interpreter %d", child);
-				pid = fork_pid(child);
-				if (pid < 0) {
-					log_error("Can't fork interpreter %d", child);
-					ret = -1;
-					goto exit;
-				} else if (pid == 0) {
-					// closing not needed fds
-					close(srv_fd);
-					vec_foreach(&server_socks, srv_fd, i)
-						close(srv_fd);
-					vec_foreach(&connections, conn_fd, i)
-						close(conn_fd);
-					vec_clear(&server_socks);
-					vec_clear(&connections);
-					
-					log_info("Running interpreter fun");
-					ret = interpreter_worker(
-						((struct cmd_fork_child*) cmd.c)->max_fd
-					);
-
-					goto exit;
-				}
-			} else {
-				log_info("Delegating fork to owner [ %d ]", cmd.owner);
-				conn_fd = connections.data[owner_id];
-				send_command(conn_fd, &cmd);
+			log_info("Forking child interpreter %d", child);
+			pid_t pid = fork_pid(child);
+			if (pid < 0) {
+				log_error("Can't fork interpreter %d", child);
+				return cleanup_fun(-1);
+			} else if (pid == 0) {
+				// closing not needed fds
+				cleanup_fun(0);
+				log_info("Running interpreter fun");
+				int ret = interpreter_worker(fork_cmd.max_fd);
+				log_info("Exiting...");
+				return ret;
 			}
-			// opening connection
+
+			// in master interpreter; opening connection with newborn worker
 			log_info("Accepting connection from [ %d ] ...", child);
 			if ((conn_fd = accept(srv_fd, NULL, NULL)) < 0) {
 				log_error("Can't open connection Master <-> %d", child);
-				ret = -1;
-				close(srv_fd);
-				goto exit;
+				return cleanup_fun(-1);
 			}
 			log_info("Connection accepted: %d", conn_fd);
 
-			// storing connection and other stuff
-
-			assert(id_pid_map.length == server_socks.length);
-			assert(id_pid_map.length == connections.length);
-			assert(id_pid_map.length == id);
-
-			if (!index_put(&pid_idx, child, id)) {
-				log_error("Can't update index");
-				ret = -1;
-				close(srv_fd);
-				close(conn_fd);
-				goto exit;
-			}
-			log_info("Add pid mapping [ %d -> %d ]", child, id);
-
-			if (vec_push(&id_pid_map, child) < 0 ||
-			    vec_push(&server_socks, srv_fd) < 0 ||
-			    vec_push(&connections, conn_fd) < 0) 
-			{
-			    	log_error("Can't update vectors");
-			    	ret = -1;
-			    	close(srv_fd);
-			    	close(conn_fd);
-			    	goto exit;
-			}
+			server_socks[child] = srv_fd;
+			connections[child] = conn_fd;
 		} else {
 			// just delegating command evaluation
-			log_info("Sending command [ %d ] to [ %d (id = %d) ] "\
-				 "through socket [ %d ]", 
-				 cmd.type, cmd.owner, owner_id, conn_fd);
-			conn_fd = connections.data[owner_id];
+			log_info("Sending command [ %d ] to [ %d ] through socket [ %d ]", 
+				     cmd.type, cmd.owner, conn_fd);
+			conn_fd = connections[cmd.owner];
 			send_command(conn_fd, &cmd);
 		}
 	}
 	
 	log_info("All commands were sent");
 
-exit:
-	vec_foreach(&server_socks, srv_fd, i) {
-		close(srv_fd);
-	}
-	vec_foreach(&connections, conn_fd, i) {
-		close(conn_fd);
-	}
-	vec_deinit(&id_pid_map);
-	vec_deinit(&server_socks);
-	vec_deinit(&connections);
-
+	cleanup_fun(0);
 	sleep(FINI_SLEEP_TIME);
-
-	return ret;
+	return 0;
 }
 
 static int send_command(int sock_fd, const struct command* cmd)
 {
-	if (io_write(sock_fd, (void*) &(cmd->type), sizeof(cmd->type)) < 0) {
+	if (io_write(sock_fd, 
+		         static_cast<const char*>(static_cast<const void*>(&(cmd->type))), 
+		         sizeof(cmd->type)) < 0) {
 		log_error("Can't send command type via socket [%s]",
 			         strerror(errno));
 		return -1;
 	}
-	if (io_write(sock_fd, cmd->c, command_sizes[cmd->type]) < 0) {
+	if (io_write(sock_fd, static_cast<const char*>(cmd->c), get_cmd_size(cmd->type)) < 0) {
 		log_error("Can't send command via socket [%s]",
 			         strerror(errno));
 		return -1;
 	}
 	return 0;
 }
-
 
 typedef int (*command_evaluator)(void* cmd);
 
@@ -224,15 +157,15 @@ static int eval_cmd_duplicate_fd(void* cmd);
 static int eval_cmd_close_fd(void* cmd);
 static int eval_cmd_create_thread(void* cmd);
 
-static command_evaluator evaluators[COMMAND_NUM] = {
-	[CMD_SETSID] = eval_cmd_setsid,
-	[CMD_FORK_CHILD] = NULL, // evaluated in main interpreter loop
-	[CMD_REG_OPEN] = eval_cmd_reg_open,
-	[CMD_CREATE_THREAD] = eval_cmd_create_thread,
-	[CMD_DUPLICATE_FD] = eval_cmd_duplicate_fd,
-	[CMD_CLOSE_FD] = eval_cmd_close_fd,
-	[CMD_FINI] = NULL, // evaluated in main loop too
-	[CMD_UNKNOWN] = NULL
+static std::map<int, command_evaluator> evaluators = {
+	{ CMD_SETSID,        eval_cmd_setsid },
+	{ CMD_FORK_CHILD,    NULL }, // evaluated in main interpreter loop
+	{ CMD_REG_OPEN,      eval_cmd_reg_open },
+	{ CMD_CREATE_THREAD, eval_cmd_create_thread },
+	{ CMD_DUPLICATE_FD,  eval_cmd_duplicate_fd },
+	{ CMD_CLOSE_FD,      eval_cmd_close_fd },
+	{ CMD_FINI,          NULL }, // evaluated in main loop too
+	{ CMD_UNKNOWN,       NULL }
 };
 
 /**
@@ -249,7 +182,7 @@ static int interpreter_worker(int max_fd)
 	int free_fd; // first free fd available for helper files during restore
 	enum cmd_type cmd_type;
 	char buf[5000];
-	char cmd_buf[COMMAND_MAX_SIZE];
+	char cmd_buf[MAX_CMD_SIZE];
 
 	struct sigaction sa;
 	memset(&sa, 0, sizeof(sa));
@@ -287,7 +220,7 @@ static int interpreter_worker(int max_fd)
 		// reading command
 		log_info("Reading command from socket [ %d ]", conn_fd);
 		if ((ret = io_read(conn_fd, (char*) &cmd_type, sizeof(enum cmd_type))) < 0 ||
-		    (ret = io_read(conn_fd, cmd_buf, command_sizes[cmd_type])) < 0) {
+		    (ret = io_read(conn_fd, cmd_buf, get_cmd_size(cmd_type))) < 0) {
 			log_stderr("Can't read command from socket");
 			goto exit;
 		}

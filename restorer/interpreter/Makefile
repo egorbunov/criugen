@@ -1,9 +1,9 @@
 BIN_NAME := restorer
 BIN_DIR := ./bin
-CXX := gcc
-CXX_FLAGS := -Wall -Werror -Wextra -pedantic-errors -I "./include" -I "./include/lib"
+CXX := g++
+CXX_FLAGS := -Wall -Werror -Wextra -std=c++11 -pedantic-errors -I "./include" -I "./include/lib"
 LD_FLAGS := -L/usr/local/lib -lzlog -lpthread -Wl,-rpath,/usr/local/lib
-SRC_EXT := c
+SRC_EXT := cpp
 SRC_PATH := src
 
 SOURCES = $(shell find $(SRC_PATH) -name '*.$(SRC_EXT)' -printf '%T@\t%p\n' | sort -k 1nr | cut -f2-)

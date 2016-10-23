@@ -7,7 +7,7 @@
 #include <unistd.h>
 
 #include "parse.h"
-#include "command.h"
+#include "command/command.h"
 #include "interpreter.h"
 #include "log.h"
 

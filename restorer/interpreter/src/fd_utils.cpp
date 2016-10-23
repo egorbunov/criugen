@@ -1,10 +1,9 @@
 #include "fd_utils.h"
 
-#include <errno.h>
+#include <cerrno>
 
 #include <fcntl.h>
 #include <unistd.h>
-
 
 int move_fd(int old_fd, int new_fd)
 {
