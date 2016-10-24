@@ -1,6 +1,9 @@
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
+#include <vector>
+
+#include <cstdio>
+#include <cstdlib>
+#include <cstring>
+
 #include <libgen.h>
 
 #include <linux/limits.h>
@@ -18,17 +21,13 @@ void print_usage(void)
 
 int main(int argc, char* argv[])
 {
-	command_vec program;
-	struct command c;
-	int i;
-   	char buf[PATH_MAX];
-
 	if (argc < 2) {
 		print_usage();
 		return 0;
 	}
 
 	// init logging
+   	char buf[PATH_MAX];
 	sprintf(buf, "%s/zlog.conf", dirname(argv[0]));
 	if (log_init(buf)) {
 		printf("Error initializing log\n");
@@ -37,19 +36,19 @@ int main(int argc, char* argv[])
 	}
 	
 	// parsing program and starting interpreter...
-	vec_init(&program);
-	if (parse_program(argv[1], &program) < 0) {
+	std::vector<command> program;
+	int ret = parse_program(argv[1], program);
+	if (ret < 0) {
 		printf("Error: can't parse json file with program\n");
-		return -1;		
+		return -1;
 	}
 
-	interpreter_run(&program);
+	interpreter_run(&program[0], program.size());
 
-	// finalizing
-	vec_foreach(&program, c, i) {
+	// clean program
+	for (auto& c : program) {
 		free(c.c);
 	}
-	vec_deinit(&program);
 
 	log_fini();
 

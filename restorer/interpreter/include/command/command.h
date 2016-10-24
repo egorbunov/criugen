@@ -4,8 +4,6 @@
 #include <sys/types.h>
 #include <linux/limits.h>
 
-#include "vec.h"
-
 /**
  * Command ID
  */
@@ -123,46 +121,23 @@ struct cmd_fini
 size_t get_cmd_number();
 
 /**
- * @param command id
+ * @param command type
  * @return tag for command with given id; static string
  */
-const char* get_cmd_tag(int cmd_id);
+const char* get_cmd_tag(enum cmd_type cmd_id);
+
+/**
+ * If given string equal to any cmd tag, that command is returned
+ * @param str (tag)
+ * @return cmd id
+ */
+enum cmd_type get_cmd_by_str(const char* str);
 
 /**
  * @param command id
  * @return sizeof for command with specified id of -1 if no such
  */
-int get_cmd_size(int cmd_id);
-
-
-/**
- * Function, which takes variable number of arguments, but returns only int
- */
-typedef int (*int_ret_fun)();
-
-/**
- * Registers procedure for particular commad. It may be useful for uniform
- * command processing.
- *
- * Example: register_procedure_for_cmd("PRINTER", CMD_SETSID, print_function);
- * 
- * @param tag tag, which is tied to command and procedure
- * @param cmd_id id of the command (see cmd_type enum)
- * @param fun procedure to be tied with given tag and id
- * @return `false` if register replaced already registered one, else `true`
- */
-bool register_procedure_for_cmd(const char* tag, 
-	                            int cmd_id, 
-	                            int_ret_fun fun);
-
-/**
- * @param tag tag, with which function was registered 
- *        (see `register_procedure_for_cmd`)
- * @param cmd_id type (id) of the command
- * @return function, which were registered for given pair (tag, cmd_id) 
- *         or NULL, if no such
- */
-int_ret_fun get_procedure_for_cmd(const char* tag, int cmd_id);
+int get_cmd_size(enum cmd_type cmd_id);
 
 
 #endif

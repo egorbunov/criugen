@@ -43,9 +43,6 @@ static int setup_child_handler()
 	memset(&sa, 0, sizeof(sa));
 	sa.sa_handler = sigchld_handler;
 	return sigaction(SIGCHLD, &sa, NULL);
-	if (sigaction(SIGCHLD, &sa, NULL) < 0) {
-		log_stderr("Can't setup child handler");
-	}
 }
 
 int interpreter_run(const command* program, int len)
@@ -73,13 +70,14 @@ int interpreter_run(const command* program, int len)
 	
 	if (setup_child_handler()) {
 		log_stderr("Can't setup child handler");
+		return cleanup_fun(-1);
 	}                             
 
 	for(int i = 0; i < len; ++i) {
 		const command& cmd = program[i];
 
-		if (cmd.type == CMD_FORK_CHILD && cmd.owner == 0) {
-			struct cmd_fork_child fork_cmd = *static_cast<struct cmd_fork_child*>(cmd.c);
+		if (cmd.type == CMD_FORK_CHILD) {
+			cmd_fork_child fork_cmd = *static_cast<cmd_fork_child*>(cmd.c);
 			pid_t child = fork_cmd.child_pid;
 
 			log_info("Got fork command; child = %d; parent = %d", 
@@ -92,18 +90,25 @@ int interpreter_run(const command* program, int len)
 				return cleanup_fun(-1);
 			}
 
-			log_info("Forking child interpreter %d", child);
-			pid_t pid = fork_pid(child);
-			if (pid < 0) {
-				log_error("Can't fork interpreter %d", child);
-				return cleanup_fun(-1);
-			} else if (pid == 0) {
-				// closing not needed fds
-				cleanup_fun(0);
-				log_info("Running interpreter fun");
-				int ret = interpreter_worker(fork_cmd.max_fd);
-				log_info("Exiting...");
-				return ret;
+			if (cmd.owner != 0) {
+				log_info("Forking child interpreter %d", child);
+				pid_t pid = fork_pid(child);
+				if (pid < 0) {
+					log_error("Can't fork interpreter %d", child);
+					return cleanup_fun(-1);
+				} else if (pid == 0) {
+					// closing not needed fds
+					cleanup_fun(0);
+					log_info("Running interpreter fun");
+					int ret = interpreter_worker(fork_cmd.max_fd);
+					log_info("Exiting...");
+					return ret;
+				}
+			} else {
+				log_info("Delegating fork of [ %d ] to it's owner [ %d ] through socket [ %d ]", 
+				     child, cmd.owner, conn_fd);
+				conn_fd = connections[cmd.owner];
+				send_command(conn_fd, &cmd);
 			}
 
 			// in master interpreter; opening connection with newborn worker
@@ -177,22 +182,16 @@ static std::map<int, command_evaluator> evaluators = {
  */
 static int interpreter_worker(int max_fd)
 {
-	int ret;
 	int conn_fd; // socket connection fd
-	int free_fd; // first free fd available for helper files during restore
-	enum cmd_type cmd_type;
-	char buf[5000];
-	char cmd_buf[MAX_CMD_SIZE];
+	auto cleanup_fun = [&conn_fd](int ret_code) {
+			close(conn_fd);
+			return ret_code;
+	};
 
-	struct sigaction sa;
-	memset(&sa, 0, sizeof(sa));
-	sa.sa_handler = sigchld_handler;
-	if (sigaction(SIGCHLD, &sa, NULL) < 0) {
+	if (setup_child_handler()) {
 		log_stderr("Can't setup child handler");
+		return cleanup_fun(-1);
 	}
-
-	free_fd = max_fd + 1;
-	ret = 0;
 
 	// connecting to socket to get commands
 	log_info("Connecting to master socket...");
@@ -204,40 +203,40 @@ static int interpreter_worker(int max_fd)
 			         getpid(), strerror(errno));
 		return -1;
 	}
+
 	// remapping socket fd because we need 'clear' fdt for process restore
-	if ((ret = move_fd(conn_fd, free_fd)) < 0) {
-		log_error("Can't remap socket fd [%d]", ret);
-		close(conn_fd);
-		ret = -1;
-		goto exit;
+	int free_fd = max_fd + 1; // first free fd available for helper files during restore
+	int mov_ret = move_fd(conn_fd, free_fd);
+	if (mov_ret < 0) {
+		log_error("Can't remap socket fd [%d]", mov_ret);
+		return cleanup_fun(-1);
 	}
 	conn_fd = free_fd;
 	free_fd += 1;
 
-	(void) max_fd;
-
+	char buf[5000];
+	char cmd_buf[MAX_CMD_SIZE];
 	while (true) {
-		// reading command
+		enum cmd_type cmd_type;
 		log_info("Reading command from socket [ %d ]", conn_fd);
-		if ((ret = io_read(conn_fd, (char*) &cmd_type, sizeof(enum cmd_type))) < 0 ||
-		    (ret = io_read(conn_fd, cmd_buf, get_cmd_size(cmd_type))) < 0) {
+		if (io_read(conn_fd, (char*) &cmd_type, sizeof(enum cmd_type)) < 0
+		    || io_read(conn_fd, cmd_buf, get_cmd_size(cmd_type)) < 0) {
+
 			log_stderr("Can't read command from socket");
-			goto exit;
+			return cleanup_fun(-1);
 		}
 		log_info("Got = %s", sprint_cmd(buf, cmd_type, cmd_buf));
 
 		if (cmd_type == CMD_FORK_CHILD) {
-			pid_t pid;
-			struct cmd_fork_child* c = (struct cmd_fork_child*) cmd_buf;
+			cmd_fork_child* c = (cmd_fork_child*) cmd_buf;
 			log_info("Forking interpreter %d", c->child_pid);
 
-			pid = fork_pid(c->child_pid);
+			pid_t pid = fork_pid(c->child_pid);
 			if (pid < 0) {
 				log_error("Can't fork interpreter %d", c->child_pid);
-				ret = -1;
-				goto exit;
+				return cleanup_fun(-1);
 			} else if (pid == 0) {
-				// close(conn_fd);
+				cleanup_fun(0);
 				log_info("Running interpreter procedure");
 				if (interpreter_worker(c->max_fd) < 0) {
 					log_error("Interpreter returned error");
@@ -247,19 +246,18 @@ static int interpreter_worker(int max_fd)
 			}
 		} else if (cmd_type == CMD_FINI) {
 			log_info("Finilizing interpreter...");
-			close(conn_fd);
 			sleep(FINI_SLEEP_TIME);
-		} else { // generic command evaluation
-			if ((ret = evaluators[cmd_type]((void*) cmd_buf)) < 0) {
+			break;
+		} else { 
+		    // generic command evaluation
+			if (evaluators[cmd_type](static_cast<void*>(cmd_buf)) < 0) {
 				log_error("Command [%d] evaluation failed", cmd_type);
-				goto exit;
+				return cleanup_fun(-1);
 			}
 		}
 	}
 
-exit:
-	close(conn_fd);
-	return ret;
+	return cleanup_fun(0);
 }
 
 // ============================ command evaluators =============================
@@ -281,9 +279,7 @@ static int eval_cmd_setsid(void* cmd)
 static int eval_cmd_reg_open(void* cmd)
 {
 	struct cmd_reg_open* c = (struct cmd_reg_open*) cmd;
-	int fd;
-
-	fd = open(c->path, c->flags, c->mode);
+	int fd = open(c->path, c->flags, c->mode);
 	if (fd < 0) {
 		log_stderr("Can't open file");
 		return -1;
