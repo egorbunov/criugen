@@ -1,5 +1,0 @@
-bin/
-*.pyc
-.tags*
-*.sublime-workspace
-*.log
