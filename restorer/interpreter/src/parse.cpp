@@ -50,6 +50,145 @@ static bool jsoneq(const char *json, jsmntok_t *tok, const char *s);
 static cmd_type parse_cmd_type(const char* str);
 static int parse_open_flag(const char* str);
 
+
+int parse_program(const char* ppath, std::vector<command>& program)
+{
+	auto err_cleanup = [&program](int ret) {
+		for (const auto& cmd : program) {
+			free(cmd.c);
+		}
+		program.clear();
+		return ret;
+	};
+
+	const size_t max_cmd_json_len = 1000;
+	char cmd_str[max_cmd_json_len];
+	char c;
+
+	std::ifstream in(ppath, std::fstream::in);
+	if (!in) {
+		return -1;
+	}
+	if (!read_check_char(in, '[', &c)) {
+		return -1;
+	}
+	do {
+		if (!read_one_cmd_str(in, cmd_str)) {
+			break;
+		}
+		command cmd;
+		if (parse_one_command(cmd_str, &cmd) < 0) {
+			return err_cleanup(-1);
+		}
+		program.push_back(cmd);
+	} while (read_check_char(in, ',', &c));
+
+	if (c != ']') {
+		return err_cleanup(-1);
+	}
+	return 0;
+}
+
+int parse_one_command(const char* cmd_str, struct command* cmd)
+{
+	const size_t max_tokens_per_cmd = 150;
+	jsmntok_t ts[max_tokens_per_cmd];
+
+	jsmn_parser parser;
+	jsmn_init(&parser);
+	int tok_num = jsmn_parse(&parser, cmd_str, strlen(cmd_str), ts, max_tokens_per_cmd);
+	// command json must be object
+	if (tok_num < 1 || ts[0].type != JSMN_OBJECT) {
+		return -1;
+	}
+	// finding command type first
+	cmd_type ct = CMD_UNKNOWN;
+	for (int i = 1; i < tok_num; i++) {
+		if (jsoneq(cmd_str, &ts[i], "#command"))
+			ct = parse_cmd_type(cmd_str + ts[i + 1].start);
+	}
+	if (ct == CMD_UNKNOWN) {
+		return -1;
+	}
+	// parsing command
+	*cmd = cmd_parser_map[ct](cmd_str, ts + 1, tok_num);
+	if (cmd.c == NULL) {
+		return -1;
+	}
+	return 0;
+}
+
+static enum cmd_type parse_cmd_type(const char* str)
+{
+	return get_cmd_by_str(str);
+}
+
+static int parse_open_flag(const char* str)
+{
+	if (strncmp(str, "O_RDWR", strlen("O_RDWR")))
+		return O_RDWR;
+	if (strncmp(str, "O_LARGEFILE", strlen("O_LARGEFILE")))
+		return 0; // TODO ?
+	if (strncmp(str, "O_CREAT", strlen("O_CREAT")))
+		return O_CREAT;
+	if (strncmp(str, "O_EXCL", strlen("O_EXCL")))
+		return O_EXCL;
+	if (strncmp(str, "O_APPEND", strlen("O_APPEND")))
+		return O_APPEND;
+	if (strncmp(str, "O_WRONLY", strlen("O_WRONLY")))
+		return O_WRONLY;
+	if (strncmp(str, "O_RDONLY", strlen("O_RDONLY")))
+		return O_RDONLY;
+	if (strncmp(str, "O_TRUNC", strlen("O_TRUNC")))
+		return O_TRUNC;
+	printf("flag not parsed: %.*s", 10, str);
+	return 0;
+}
+
+static bool jsoneq(const char *json, jsmntok_t *tok, const char *s) {
+	if (tok->type == JSMN_STRING && (int) strlen(s) == tok->end - tok->start 
+		&& strncmp(json + tok->start, s, tok->end - tok->start) == 0) {
+		return true;
+	}
+	return false;
+}
+
+static bool read_one_cmd_str(std::ifstream& in, char* str)
+{
+	char ch;
+	if (!read_check_char(in, '{', &ch)) 
+		return false;
+	int balance = 1;
+	int i = 0;
+	str[i++] = '{';
+	while (balance != 0) {
+		ch = in.get();
+		if (ch == '{')
+			balance += 1;
+		else if (ch == '}')
+			balance -= 1;
+		else if (ch == EOF)
+			return false;
+		if (!isspace(ch))
+			str[i++] = ch;
+	}
+	str[i] = '\0';
+	return true;
+}
+
+/**
+ * Reads characters to `c` from file and stops on first non-space one.
+ * If that character is equal to given `ch` true is returned, else false
+ */
+ static bool read_check_char(std::ifstream& in, char ch, char* c)
+ {
+ 	*c = ' ';
+ 	while (isspace(*c)) {
+ 		*c = in.get();
+ 	}
+ 	return *c == ch;
+ }
+
 static command parse_cmd_setsid(const char* s, jsmntok_t* ts, int n)
 {
 	command cmd = { CMD_UNKNOWN, -1, NULL };
@@ -215,135 +354,3 @@ static command parse_cmd_fini(const char* s, jsmntok_t* ts, int n)
 	cmd.c = c;
 	return cmd;
 }
-
-int parse_program(const char* ppath, std::vector<command>& program)
-{
-	auto err_cleanup = [&program](int ret) {
-		for (const auto& cmd : program) {
-			free(cmd.c);
-		}
-		program.clear();
-		return ret;
-	};
-
-	const size_t max_cmd_json_len = 1000;
-	const size_t max_tokens_per_cmd = 150;
-	jsmntok_t ts[max_tokens_per_cmd];
-
-	char cmd_str[max_cmd_json_len];
-	char c;
-
-	std::ifstream in(ppath, std::fstream::in);
-	if (!in) {
-		return -1;
-	}
-
-	if (!read_check_char(in, '[', &c)) {
-		return -1;
-	}
-	do {
-		if (!read_one_cmd_str(in, cmd_str)) {
-			break;
-		}
-		jsmn_parser parser;
-		jsmn_init(&parser);
-		int tok_num = jsmn_parse(&parser, cmd_str, strlen(cmd_str), ts, max_tokens_per_cmd);
-		// json must be object
-		if (tok_num < 1 || ts[0].type != JSMN_OBJECT) {
-			return err_cleanup(-1);
-		}
-		// finding command type first
-		cmd_type ct = CMD_UNKNOWN;
-		for (int i = 1; i < tok_num; i++) {
-			if (jsoneq(cmd_str, &ts[i], "#command"))
-				ct = parse_cmd_type(cmd_str + ts[i + 1].start);
-		}
-		if (ct == CMD_UNKNOWN) {
-			return err_cleanup(-1);
-		}
-		// parsing command
-		command cmd = cmd_parser_map[ct](cmd_str, ts + 1, tok_num);
-		if (cmd.c == NULL) {
-			return err_cleanup(-1);
-		}
-		program.push_back(cmd);
-	} while (read_check_char(in, ',', &c));
-
-	if (c != ']') {
-		return err_cleanup(-1);
-	}
-
-	return 0;
-} 
-
-static enum cmd_type parse_cmd_type(const char* str)
-{
-	return get_cmd_by_str(str);
-}
-
-static int parse_open_flag(const char* str)
-{
-	if (strncmp(str, "O_RDWR", strlen("O_RDWR")))
-		return O_RDWR;
-	if (strncmp(str, "O_LARGEFILE", strlen("O_LARGEFILE")))
-		return 0; // TODO ?
-	if (strncmp(str, "O_CREAT", strlen("O_CREAT")))
-		return O_CREAT;
-	if (strncmp(str, "O_EXCL", strlen("O_EXCL")))
-		return O_EXCL;
-	if (strncmp(str, "O_APPEND", strlen("O_APPEND")))
-		return O_APPEND;
-	if (strncmp(str, "O_WRONLY", strlen("O_WRONLY")))
-		return O_WRONLY;
-	if (strncmp(str, "O_RDONLY", strlen("O_RDONLY")))
-		return O_RDONLY;
-	if (strncmp(str, "O_TRUNC", strlen("O_TRUNC")))
-		return O_TRUNC;
-	printf("flag not parsed: %.*s", 10, str);
-	return 0;
-}
-
-static bool jsoneq(const char *json, jsmntok_t *tok, const char *s) {
-	if (tok->type == JSMN_STRING && (int) strlen(s) == tok->end - tok->start 
-		&& strncmp(json + tok->start, s, tok->end - tok->start) == 0) {
-		return true;
-	}
-	return false;
-}
-
-static bool read_one_cmd_str(std::ifstream& in, char* str)
-{
-	char ch;
-	if (!read_check_char(in, '{', &ch)) 
-		return false;
-	int balance = 1;
-	int i = 0;
-	str[i++] = '{';
-	while (balance != 0) {
-		ch = in.get();
-		if (ch == '{')
-			balance += 1;
-		else if (ch == '}')
-			balance -= 1;
-		else if (ch == EOF)
-			return false;
-		if (!isspace(ch))
-			str[i++] = ch;
-	}
-	str[i] = '\0';
-	return true;
-}
-
-/**
- * Reads characters to `c` from file and stops on first non-space one.
- * If that character is equal to given `ch` true is returned, else false
- */
- static bool read_check_char(std::ifstream& in, char ch, char* c)
- {
- 	*c = ' ';
- 	while (isspace(*c)) {
- 		*c = in.get();
- 	}
- 	return *c == ch;
- }
-

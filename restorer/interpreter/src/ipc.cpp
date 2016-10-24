@@ -17,13 +17,14 @@ static struct sockaddr_un get_socket_addr(pid_t pid)
 int socket_open(pid_t pid)
 {
 	const int srv_backlog = 100;
-	int fd;
-	struct sockaddr_un addr;
 
-	if ((fd = socket(AF_UNIX, SOCK_STREAM, 0)) < 0)
+	int fd = socket(AF_UNIX, SOCK_STREAM, 0);
+	if (fd < 0)
 	    return -1;
+	struct sockaddr_un addr;
 	memset(&addr, 0, sizeof(struct sockaddr_un));
 	addr = get_socket_addr(pid);
+	
 	if (access(addr.sun_path, F_OK) == 0)
 		if (unlink(addr.sun_path) < 0)
 			return -1;
@@ -36,11 +37,12 @@ int socket_open(pid_t pid)
 
 int socket_connect(pid_t pid)
 {
-	struct sockaddr_un addr;
-	int fd;
-
-	if ((fd = socket(AF_UNIX, SOCK_STREAM, 0)) < 0)
+	int fd = socket(AF_UNIX, SOCK_STREAM, 0);
+	if (fd < 0)
 	    return -1;
+
+	struct sockaddr_un addr;
+
 	memset(&addr, 0, sizeof(struct sockaddr_un));
 	addr = get_socket_addr(pid);
 	if (connect(fd, (struct sockaddr*) &addr, sizeof(struct sockaddr_un)) < 0)

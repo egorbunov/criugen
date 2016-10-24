@@ -14,15 +14,9 @@
 int fork_pid(pid_t pid)
 {
 	const char* pid_file = "/proc/sys/kernel/ns_last_pid";
-	char buf[32];
-	int fd;
-	pid_t new_pid;
-	int pipefd[2];
-	int ret;
 
 	// TODO: do we need to save old value from pid file and restore it after forking?
-
-	fd = open(pid_file, O_RDWR | O_CREAT, 0644);
+	int fd = open(pid_file, O_RDWR | O_CREAT, 0644);
 	if (fd < 0) {
 		log_stderr("Can't open pid file");
 		return -1;
@@ -33,19 +27,21 @@ int fork_pid(pid_t pid)
 		close(fd);
 		return -1;
 	}
+	char buf[32];
 	snprintf(buf, sizeof(buf), "%d", pid - 1);
 	if (write(fd, buf, strlen(buf)) != (ssize_t) strlen(buf)) {
 		log_stderr("Can't write pid file");
 		close(fd);
 		return -1;
 	}
+	int pipefd[2];
 	if (pipe(pipefd) < 0) {
 		log_stderr("Can't open pipe");
 		close(fd);
 		return -1;
 	}
 	// forking
-	new_pid = fork();
+	pid_t new_pid = fork();
 	if (new_pid < 0) {
 		log_stderr("Can't fork");
 		close(fd);
@@ -53,7 +49,7 @@ int fork_pid(pid_t pid)
 		close(pipefd[1]);
 	} else if (new_pid != 0) {
 		close(pipefd[0]);
-		ret = new_pid;
+		int ret = new_pid;
 		if (flock(fd, LOCK_UN)) {
 			log_stderr("Can't unlock pid file");
 			ret = -1;

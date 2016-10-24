@@ -25,7 +25,7 @@
 #define FINI_SLEEP_TIME 200
 
 static int interpreter_worker(int max_fd);
-static int send_command(int sock_fd, const struct command*);
+static int send_command(int sock_fd, const command*);
 
 static void sigchld_handler(int sig)
 {
@@ -137,7 +137,7 @@ int interpreter_run(const command* program, int len)
 	return 0;
 }
 
-static int send_command(int sock_fd, const struct command* cmd)
+static int send_command(int sock_fd, const command* cmd)
 {
 	if (io_write(sock_fd, 
 		         static_cast<const char*>(static_cast<const void*>(&(cmd->type))), 
@@ -264,7 +264,7 @@ static int interpreter_worker(int max_fd)
 
 static int eval_cmd_setsid(void* cmd)
 {
-	struct cmd_setsid c = *((struct cmd_setsid*) cmd);
+	cmd_setsid c = *static_cast<cmd_setsid*>(cmd);
 	(void) c;
 
 	log_info("Evaluating setsid...");
@@ -278,7 +278,7 @@ static int eval_cmd_setsid(void* cmd)
 
 static int eval_cmd_reg_open(void* cmd)
 {
-	struct cmd_reg_open* c = (struct cmd_reg_open*) cmd;
+	cmd_reg_open* c = *static_cast<cmd_reg_open*>(cmd);
 	int fd = open(c->path, c->flags, c->mode);
 	if (fd < 0) {
 		log_stderr("Can't open file");
@@ -298,7 +298,7 @@ static int eval_cmd_reg_open(void* cmd)
 
 static int eval_cmd_duplicate_fd(void* cmd)
 {
-	struct cmd_duplicate_fd* c = (struct cmd_duplicate_fd*) cmd;
+	cmd_duplicate_fd* c = *static_cast<cmd_duplicate_fd*>(cmd);
 	if (dup2(c->old_fd, c->new_fd) < 0) {
 		log_error("Can't dup fd [ %d ] to [ %d ] [ %s ]", 
 			  c->old_fd, c->new_fd, strerror(errno));
@@ -309,7 +309,7 @@ static int eval_cmd_duplicate_fd(void* cmd)
 
 static int eval_cmd_close_fd(void* cmd)
 {
-	struct cmd_close_fd* c = (struct cmd_close_fd*) cmd;
+	cmd_close_fd* c = *static_cast<cmd_close_fd*>(cmd);
 	if (close(c->fd) < 0) {
 		log_error("Can't close fd [ %d ] [ %s ]", c->fd, strerror(errno));
 		return -1;
@@ -319,7 +319,7 @@ static int eval_cmd_close_fd(void* cmd)
 
 static int eval_cmd_create_thread(void* cmd)
 {
-	struct cmd_create_thread c = *((struct cmd_create_thread*) cmd);
+	cmd_create_thread c = *static_cast<cmd_create_thread*>(cmd);
 	(void) c;
 
 	log_info("Evaluating create thread... (TODO)");

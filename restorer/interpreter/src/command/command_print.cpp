@@ -37,8 +37,8 @@ void print_cmd(const struct command* c)
 	char buf[4000];
 	sprint_cmd(buf, c->type, c->c);
 	printf("%s", buf);
-}
 
+}
 // ========= implementation details ===========
 
 static int sprint_cmd_setsid(char* buf, const void* cmd, const char* tag)

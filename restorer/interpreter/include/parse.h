@@ -17,4 +17,10 @@
  */
 int parse_program(const char* ppath, std::vector<command>& program);
 
+/**
+ * Parses one command from given string
+ * @return 0 on success, negative value on failure
+ */
+int parse_one_command(const char* cmd_str, struct command* cmd);
+
 #endif
