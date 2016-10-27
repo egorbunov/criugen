@@ -5,11 +5,11 @@
 \makeatother
 \graphicspath{{./fig/}}
 
-\title{CRIU Restorer 2.0}
+\title{CRIU Restorer v2}
 \author[Егор Горбунов]{
-	\hspace{6cm} Выполнил: \hfill Егор Горбунов 
+	\hspace{5cm} Студент: \hfill Егор Горбунов 
 	\newline
-	\hspace*{6cm} Руководитель:  \hfill Евгений Баталов
+	\hspace*{5cm} Руководитель:  \hfill Евгений Баталов
 }
 \institute{Кафедра математических и информационных технологий, CПбАУ}
 % \date{20 мая 2016 г.}
@@ -18,15 +18,90 @@
 \maketitle
 
 \begin{frame}{Что такое CRIU?}
+\begin{itemize}
+	\item Позволяет:
+		\begin{itemize}
+			\item \alert{Checkpoint}: останавливать процесс (дерево процессов) и сохранять его состояние \underline{на диск}
+			\item \alert{Restore}: восстанавливать процесс по сохранённому на диск состоянию
+		\end{itemize}
+	\item Пользовательское приложение, такое же как \texttt{grep}, \texttt{cat} и т.д.
+	\item Ядро Linux $\geq 3.11\ (2013)$
+\end{itemize}
 \end{frame}
 
-\begin{frame}{Аналоги CRIU}
+\begin{frame}{Ресурсы процесса для восстановления}
+\begin{itemize}
+	\item Идентификаторы: PID, PGID, SID
+	\item Виртуальное адресное пространство
+	\item Регистры
+	\item Файловые дескрипторы
+	\begin{itemize}
+		\item обычные файлы, сокеты, pipe's, inotify instances, eventfd...
+	\end{itemize}
+	\item Linux namespaces
+	\item Linux cgroups
+	\item Обработчики сигналов
+	\item Необработанные очереди сигналов
+	\item File lock's
+	\item Таймеры
+	\item Потоки
+\end{itemize}
 \end{frame}
 
-\begin{frame}{CRIU Restorer}
+\begin{frame}{CRIU Checkout}
+\begin{itemize}
+	\item Заморозка процесса
+	\item Обход файловой системы \texttt{/proc/pid} для получения части информаци о 
+	\item Инъекция паразитного кода
+	\item Паразитный код: читает данные о регистрах, памяти, файловых дескрипторах
+	\item Паразитный код отправляет данные в процесс \texttt{criu}.
+\end{itemize}
 \end{frame}
 
-\begin{frame}{Почему CRIU сложный}
+
+\begin{frame}{CRIU Restore}
+\begin{itemize}
+	\item Считать состояние дерева процессов с диска
+	\item Создать корень дерева и восстановить его namespaces
+	\item Воссоздать дерево процессов
+	\item Восстановить файловые дескрипторы и прочие разделяемые ресурсы
+	\item Инъецировать PIE код последней стадии Restorera в восстанавливаемые...
+	\item ...
+\end{itemize}
+\end{frame}
+
+\begin{frame}{Почему Restorer сложный?}
+\begin{itemize}
+	\item Код на языке \texttt{C} в стиле ядра Linux
+	\item Код двух больших и независимых задачи (Dump, Restore) написан в одном месте (модули пересекаются)
+	\item Между ресурсами для восстановления (некоторыми) существуют зависимости, что влияет на порядок выполнения операций, а это делает более трудным добавление поддержки новых ресурсов
+	\item К этому всему добавляется многопоточная (процессная) архитектура CRIU
+\end{itemize}
+\end{frame}
+
+
+\begin{frame}{Другие Checkpoint/Restore проекты}
+\textbf{Работают на \underline{неизменённом} ядре Linux}
+\begin{itemize}
+	\item \href{http://crd.lbl.gov/departments/computer-science/CLaSS/research/BLCR/}{BLCR}\footnotemark \ (2003)
+		\begin{itemize}
+				\item[-] не поддерживает \texttt{linux namespaces}
+				\item[-] требует подгрузки модуля к ядру
+		\end{itemize}
+	\item \href{http://dmtcp.sourceforge.net/}{DMTCP}\footnotemark\ (2004)
+		\begin{itemize}
+			\item[-] к целевому процессу с момента запуска должна быть подключена библиотека
+			\item[-] не поддерживает \texttt{linux namespaces}
+			\item[-] перехватывает часть \texttt{glibc} и системных вызовов
+		\end{itemize}
+\end{itemize}
+\textbf{Требуют использования своего ядра:}
+\begin{itemize}
+	\item OpenVZ (2005)
+	\item \href{https://ckpt.wiki.kernel.org/index.php/Main_Page}{Linux Checkpoint/Restart} (2008)
+\end{itemize}
+\footnotetext[1]{Berkeley Lab Checkpoint/Restart}
+\footnotetext[2]{Distributed MultiThreaded CheckPointing}
 \end{frame}
 
 \end{document}
