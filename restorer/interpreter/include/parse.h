@@ -1,26 +1,16 @@
-#ifndef PARSE_H_INCLUDED__
-#define PARSE_H_INCLUDED__
+#pragma once
 
 #include <vector>
-
-#include <cstdio>
-#include <cstdlib>
+#include <istream>
+#include <memory>
 
 #include "command/command.h"
 
 /**
- * @param path to program file
+ * @param input stream with program
  * @param program vector there commands will be added
- * @return non-negative value if all is ok; in case of no errors
- *         user must free all payload command data from commands
- *         in program (delete command->c).
+ * @return non-negative value if all is ok;
+ *
+ * WARNING: all commands are allocated on the heap
  */
-int parse_program(const char* ppath, std::vector<command>& program);
-
-/**
- * Parses one command from given string
- * @return 0 on success, negative value on failure
- */
-int parse_one_command(const char* cmd_str, struct command* cmd);
-
-#endif
+int parse_program(std::istream &in, std::vector<std::shared_ptr<command>>& program);

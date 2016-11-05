@@ -1,22 +1,17 @@
-#ifndef LOG_H_INCLUDED__
-#define LOG_H_INCLUDED__
+#pragma once
 
-#include <errno.h>
-#include <string.h>
+#include <iostream>
+#include <string>
 
-#include <zlog.h>
+#include <cstdarg>
 
-int log_init(const char* zlog_conf_path);
-zlog_category_t* get_log_category();
-void log_fini(void);
+namespace log 
+{
+	void log_setup(std::string& log_file_name);
 
-#define log_info(...) \
-	zlog_info(get_log_category(), __VA_ARGS__)
+	void log_info(const char* fmt...);
 
-#define log_error(...) \
-	zlog_error(get_log_category(), __VA_ARGS__)
+	void log_error(const char* fmt...);
 
-#define log_stderr(msg) \
-	zlog_error(get_log_category(), "%s [ %s ]", msg, strerror(errno))
-
-#endif
+	void log_stderr(const char* fmt...);
+}

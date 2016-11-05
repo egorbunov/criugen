@@ -1,5 +1,4 @@
-#ifndef FD_H_INCLUDED__
-#define FD_H_INCLUDED__
+#pragma once
 
 /**
  * moves fd from old to new one
@@ -9,4 +8,3 @@
  */
 int move_fd(int old_fd, int new_fd);
 
-#endif

@@ -1,4 +1,6 @@
 #include <vector>
+#include <iostream>
+#include <fstream>
 
 #include <cstdio>
 #include <cstdlib>
@@ -9,48 +11,49 @@
 #include <linux/limits.h>
 #include <unistd.h>
 
-#include "parse.h"
-#include "command/command.h"
-#include "interpreter.h"
 #include "log.h"
+#include "parse.h"
+#include "restorer.h"
 
 void print_usage(void)
 {
-	printf("USAGE: ./interpreter '/path/to/program.json'\n");
+	printf("USAGE: ./interpreter '/path/to/program.json' -l 'path/to/log.file'\n");
 }
 
 int main(int argc, char* argv[])
 {
-	if (argc < 2) {
+	std::string log_file = "";
+	std::string program_file = "";
+
+	for (int i = 1; i < argc; ++i) {
+		if (strcmp("-l", argv[i]) == 0) {
+			if (++i == argc) {
+				std::cout << "ERROR: no log file specified after key '-l'!" << std::endl;
+				print_usage();
+				return -1;
+			}
+			log_file = argv[i];
+		} else {
+			program_file = argv[i];
+		}
+	}
+
+	if (program_file.empty() || log_file.empty()) {
+		std::cout << "ERROR: bad args!" << std::endl;
 		print_usage();
-		return 0;
-	}
-
-	// init logging
-   	char buf[PATH_MAX];
-	sprintf(buf, "%s/zlog.conf", dirname(argv[0]));
-	if (log_init(buf)) {
-		printf("Error initializing log\n");
-		printf("Config file path: %s\n", buf);
 		return -1;
 	}
+
+	log::log_setup(log_file);
+	std::ifstream in(program_file);
+	std::vector<std::shared_ptr<command>> program;
+	if (parse_program(in, program) < 0) {
+		std::cout << "ERROR: Can't parse program!" << std::endl;
+		return -1;
+	}
+
+	restorer r(program);
+	r.run();
 	
-	// parsing program and starting interpreter...
-	std::vector<command> program;
-	int ret = parse_program(argv[1], program);
-	if (ret < 0) {
-		printf("Error: can't parse json file with program\n");
-		return -1;
-	}
-
-	interpreter_run(&program[0], program.size());
-
-	// clean program
-	for (auto& c : program) {
-		free(c.c);
-	}
-
-	log_fini();
-
 	return 0;
 }

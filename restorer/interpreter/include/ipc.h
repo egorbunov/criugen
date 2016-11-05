@@ -1,5 +1,4 @@
-#ifndef IPC_H_INCLUDED__
-#define IPC_H_INCLUDED__
+#pragma once
 
 #include <sys/types.h>
 
@@ -18,5 +17,3 @@ int socket_open(pid_t pid);
  * @return     fd of socket or -1 in case of error
  */
 int socket_connect(pid_t pid);
-
-#endif
