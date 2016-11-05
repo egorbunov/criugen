@@ -46,7 +46,7 @@ class Cmd():
     @staticmethod
     def close_fd(pid, fd):
         return {
-            "#command"   : "CLOSE_FD",
+            "#command"  : "CLOSE_FD",
             "pid"       : pid,
             "fd"        : fd
         }
