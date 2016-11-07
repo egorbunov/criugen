@@ -95,13 +95,17 @@ class ProgramBuilder:
         add_cmd(Cmd.setsid(app.get_real_root().pid));
 
         # ====== dealing with regular file descriptors =======
-        def process_reg_files(proc):
-            par = app.get_process_by_pid(proc.ppid)
+        def process_reg_files(process):
+            parent = app.get_process_by_pid(process.ppid)
 
-            cur_fdt = dict((fd, file) for fd, file in par.fdt.iteritems()
-                           if isinstance(file, nodes.RegularFile))
-            cur_files = dict((file, set(fds)) for file, fds in par.file_map.iteritems()
-                             if isinstance(file, nodes.RegularFile))
+            # current file descriptor table (fdt) == fdt just after fork() or clone()
+            # which is inherited from parent process
+            cur_fdt = dict((fd, f) for fd, f in parent.fdt.iteritems()
+                           if isinstance(f, nodes.RegularFile))
+            # two file descriptor may point to one file instance actually, so this is
+            # map from file to set of file descriptors pointing to it
+            cur_files = dict((f, set(fds)) for f, fds in parent.file_map.iteritems()
+                             if isinstance(f, nodes.RegularFile))
 
             def del_fd(fd):
                 cur_files[cur_fdt[fd]].remove(fd)
@@ -115,49 +119,60 @@ class ProgramBuilder:
                     cur_files[file] = set()
                 cur_files[file].add(fd)
 
+            # TODO: refactor this duplicating code
+            if process.fdt is None or len(process.fdt) == 0:
+                free_fd = 3  # 3 beacuse 0, 1, 2 are may be used by std our err and in
+            else:
+                free_fd = max(process.fdt) + 1
+
             # creating temporary file links not to loose some files during fd fixing
             # we don't need to create such link to file if file is already opened at least at
             # one desired file descriptor
             # it can be avoided by implementing more complex algorithm, but simplicity
             # is better for now
-            free_fd = max(proc.fdt) + 1 if proc.fdt else 3  # 3 beacuse 0, 1, 2 are for stds...
-            for file in cur_files:
-                if file in proc.file_map and not proc.file_map[file].intersection(cur_files[file]):
-                    add_cmd(Cmd.duplicate_fd(proc.pid, next(iter(cur_files[file])), free_fd))
-                    add_fd(free_fd, file)
+            for f in cur_files:
+                if f in process.file_map and not process.file_map[f].intersection(cur_files[f]):
+                    add_cmd(Cmd.duplicate_fd(process.pid, next(iter(cur_files[f])), free_fd))
+                    add_fd(free_fd, f)
                     free_fd += 1
 
             # fixing fds
-            for fd, file in proc.fdt.iteritems():
-                if not isinstance(file, nodes.RegularFile):
-                    continue
-                if fd in cur_fdt and cur_fdt[fd] == file:
+            for fd, f in process.fdt.iteritems():
+                if not isinstance(f, nodes.RegularFile):
                     continue
 
-                if fd in cur_fdt and cur_fdt[fd] != file:
-                    if file not in cur_files:
-                        add_cmd(Cmd.close_fd(proc.pid, fd))
-                        add_cmd(Cmd.reg_open(proc.pid, fd, file))
+                # file is already opened at proper fd in parent process
+                # so it will be inherited and ok
+                if fd in cur_fdt and cur_fdt[fd] == f:
+                    continue
+
+                # fd is already taken in parent process but for another file (not f)
+                if fd in cur_fdt and cur_fdt[fd] != f:
+                    if f not in cur_files:
+                        # f is not opened at all
+                        add_cmd(Cmd.close_fd(process.pid, fd))
+                        add_cmd(Cmd.reg_open(process.pid, fd, f))
                     else:
-                        ofd = next(iter(cur_files[file]))
-                        add_cmd(Cmd.duplicate_fd(proc.pid, ofd, fd))
+                        # f is opened but at another fd
+                        ofd = next(iter(cur_files[f]))
+                        add_cmd(Cmd.duplicate_fd(process.pid, ofd, fd))
                     del_fd(fd)
-                    add_fd(fd, file)
+                    add_fd(fd, f)
 
-                elif fd not in cur_fdt and proc.fdt[fd] in cur_files:
-                    ofd = next(iter(cur_files[file]))
-                    add_cmd(Cmd.duplicate_fd(proc.pid, ofd, fd))
-                    add_fd(fd, file)
+                elif fd not in cur_fdt and process.fdt[fd] in cur_files:
+                    ofd = next(iter(cur_files[f]))
+                    add_cmd(Cmd.duplicate_fd(process.pid, ofd, fd))
+                    add_fd(fd, f)
 
-                elif fd not in cur_fdt and proc.fdt[fd] not in cur_files:
-                    add_cmd(Cmd.reg_open(proc.pid, fd, file))
-                    add_fd(fd, file)
+                elif fd not in cur_fdt and process.fdt[fd] not in cur_files:
+                    add_cmd(Cmd.reg_open(process.pid, fd, f))
+                    add_fd(fd, f)
 
             # closing everything not opened in cur proc
             # temporary file links are closed here too
-            for fd, file in cur_fdt.iteritems():
-                if fd not in proc.fdt:
-                    add_cmd(Cmd.close_fd(proc.pid, fd))
+            for fd, f in cur_fdt.iteritems():
+                if fd not in process.fdt:
+                    add_cmd(Cmd.close_fd(process.pid, fd))
 
         # ========= reg_files processing end =========
 
@@ -165,10 +180,10 @@ class ProgramBuilder:
             process_reg_files(p)
 
         # adding child forking as last command to every process program
-        def forks_dfs(proc):
-            max_fd = max(proc.fdt)
-            add_cmd(Cmd.fork_child(proc.ppid, proc.pid, max_fd))
-            for ch in app.get_children(proc):
+        def forks_dfs(process):
+            max_fd = max(process.fdt) if process.fdt else 3  # TODO: refactor this duplicating code
+            add_cmd(Cmd.fork_child(process.ppid, process.pid, max_fd))
+            for ch in app.get_children(process):
                 forks_dfs(ch)
 
         forks_dfs(app.get_real_root())
@@ -178,11 +193,11 @@ class ProgramBuilder:
             add_cmd(Cmd.fini_cmd(p.pid))
 
         # concatenate per process programs into final one
-        def concat_programs(proc, program=None):
+        def concat_programs(process, program=None):
             if program is None:
                 program = []
-            program.extend(programs[proc.pid])
-            for ch in app.get_children(proc):
+            program.extend(programs[process.pid])
+            for ch in app.get_children(process):
                 concat_programs(ch, program)
             return program
 

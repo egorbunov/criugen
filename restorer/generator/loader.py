@@ -30,6 +30,8 @@ def load_item(source_path, item_name, item_type):
         raise ValueError("Unknown item type {}".format(item_type))
 
     img_path = os.path.join(source_path, "{}.{}".format(item_name, item_type))
+    if not os.path.isfile(img_path):
+        return None
     return loaders[item_type](img_path)
 
 
@@ -90,9 +92,12 @@ def load(source_path, item_type):
 
         ids_item = load_item(source_path, "ids-{}".format(entry["pid"]), item_type)
         files_id = ids_item["entries"][0]["files_id"]
+
+        # if no file descriptors fdinfo file is not created
         fd_info_item = load_item(source_path, "fdinfo-{}".format(files_id), item_type)
-        for fd_entry in fd_info_item["entries"]:
-            process.add_file_descriptor(fd_entry["fd"], files[fd_entry["id"]])
+        if fd_info_item is not None:
+            for fd_entry in fd_info_item["entries"]:
+                process.add_file_descriptor(fd_entry["fd"], files[fd_entry["id"]])
 
         mm_item = load_item(source_path, "mm-{}".format(entry["pid"]), item_type)
         vma_items = mm_item["entries"][0]["vmas"]
