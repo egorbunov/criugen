@@ -5,6 +5,7 @@ import glob
 import pycriu
 import nodes
 
+
 def load_img(img_path):
     with open(img_path, "r") as f:
         try:
@@ -13,15 +14,16 @@ def load_img(img_path):
             print("Incorrect magic in {}".format(img_path))
             return None
 
+
 def load_json(img_path):
     with open(img_path, "r") as f:
-            return json.load(f)
+        return json.load(f)
 
 
 def load_item(source_path, item_name, item_type):
     loaders = {
-        "img"  : load_img,
-        "json" : load_json 
+        "img": load_img,
+        "json": load_json
     }
 
     if item_type not in loaders:
@@ -32,8 +34,8 @@ def load_item(source_path, item_name, item_type):
 
 
 def load(source_path, item_type):
-    available_imgs = [ os.path.splitext(os.path.basename(s))[0] 
-                       for s in glob.glob(os.path.join(source_path, "*.{}".format(item_type))) ]
+    available_imgs = [os.path.splitext(os.path.basename(s))[0]
+                      for s in glob.glob(os.path.join(source_path, "*.{}".format(item_type)))]
 
     processes = []
     files = {}
@@ -48,8 +50,8 @@ def load(source_path, item_type):
                 size = None
             else:
                 size = entry["size"]
-            flags = [ s.strip() for s in entry["flags"].split("|") ]
-            rf = nodes.RegularFile(file_path=file_paths[entry["name"]], 
+            flags = [s.strip() for s in entry["flags"].split("|")]
+            rf = nodes.RegularFile(file_path=file_paths[entry["name"]],
                                    size=size,
                                    pos=entry["pos"],
                                    flags=flags,
@@ -62,7 +64,7 @@ def load(source_path, item_type):
     def load_pipes(img):
         pipes_item = load_item(source_path, img, item_type)
         for entry in pipes_item["entries"]:
-            flags = [ s.strip() for s in entry["flags"].split("|") ]
+            flags = [s.strip() for s in entry["flags"].split("|")]
             pf = nodes.PipeFile(pipe_id=entry["pipe_id"], flags=flags)
             files[entry["id"]] = pf
 
@@ -72,8 +74,8 @@ def load(source_path, item_type):
     # reading every process specific data
     pstree_item = load_item(source_path, "pstree", item_type)
     for entry in pstree_item["entries"]:
-        process = nodes.Process(pid = entry["pid"],
-                                ppid = entry["ppid"])
+        process = nodes.Process(pid=entry["pid"],
+                                ppid=entry["ppid"])
         processes.append(process)
         for t in entry["threads"]:
             if t != 0:
@@ -88,7 +90,7 @@ def load(source_path, item_type):
 
         ids_item = load_item(source_path, "ids-{}".format(entry["pid"]), item_type)
         files_id = ids_item["entries"][0]["files_id"]
-        fd_info_item = load_item(source_path, "fdinfo-{}".format(files_id), item_type)  
+        fd_info_item = load_item(source_path, "fdinfo-{}".format(files_id), item_type)
         for fd_entry in fd_info_item["entries"]:
             process.add_file_descriptor(fd_entry["fd"], files[fd_entry["id"]])
 

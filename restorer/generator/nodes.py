@@ -1,5 +1,6 @@
 import bisect
 
+
 class TaskState:
     UNDEF = 0x0
     ALIVE = 0x1
@@ -8,7 +9,8 @@ class TaskState:
     HELPER = 0x4
     THREAD = 0x5
 
-class Process(object):
+
+class Process:
     def __init__(self, pid, ppid):
         self._pid = int(pid)
         self._ppid = int(ppid)
@@ -40,8 +42,12 @@ class Process(object):
 
     @state.setter
     def state(self, state):
-        states = set([ TaskState.UNDEF, TaskState.STOPPED, TaskState.ALIVE, TaskState.DEAD,
-                       TaskState.HELPER, TaskState.THREAD ])
+        states = {TaskState.UNDEF,
+                  TaskState.STOPPED,
+                  TaskState.ALIVE,
+                  TaskState.DEAD,
+                  TaskState.HELPER,
+                  TaskState.THREAD}
         if state not in states:
             raise ValueError("Unknown task state")
         self._state = state
@@ -49,7 +55,7 @@ class Process(object):
     def add_file_descriptor(self, fd, file):
         if fd in self._fdt:
             raise ValueError("File at fd {} already exists".format(fd))
-        if not file in self._file_map:
+        if file not in self._file_map:
             self._file_map[file] = set()
         self._file_map[file].add(fd)
         self._fdt[fd] = file
@@ -61,12 +67,11 @@ class Process(object):
     def fdt(self):
         """ file_descriptor -> File """
         return self._fdt
-    
+
     @property
     def file_map(self):
         """ File -> [ file_descriptor ] """
         return self._file_map
-    
 
     @property
     def vmas(self):
@@ -103,7 +108,7 @@ class Process(object):
         return self.__str__()
 
     def __eq__(self, other):
-        return self.pid == other.pid; # ok ?
+        return self.pid == other.pid  # ok ?
 
     def __hash__(self):
         return self.pid
@@ -113,9 +118,9 @@ class Application(object):
     def __init__(self, proc):
         self._dummy_root_parent = Process(proc.ppid, -1)
         self._root_process = proc
-        self._pid_proc_map = { proc.pid : proc, self._dummy_root_parent.pid : self._dummy_root_parent }
+        self._pid_proc_map = {proc.pid: proc, self._dummy_root_parent.pid: self._dummy_root_parent}
         # pid -> children pids
-        self._pid_ch_map = { proc.pid : [], self._dummy_root_parent.pid : [ proc.pid ] } 
+        self._pid_ch_map = {proc.pid: [], self._dummy_root_parent.pid: [proc.pid]}
 
     def get_root(self):
         return self._dummy_root_parent
@@ -147,7 +152,7 @@ class Application(object):
         return self._pid_proc_map[pid]
 
     def get_all_processes(self):
-        return [ v for k, v in self._pid_proc_map.iteritems() if v is not self._dummy_root_parent ]
+        return [v for k, v in self._pid_proc_map.iteritems() if v is not self._dummy_root_parent]
 
 
 class File(object):
@@ -172,10 +177,10 @@ class File(object):
     @property
     def id(self):
         return self._id
-    
+
 
 class RegularFile(File):
-    def __init__(self, file_path, size, pos, flags, mode, id = -1):
+    def __init__(self, file_path, size, pos, flags, mode, id=-1):
         super(RegularFile, self).__init__(id)
         self._file_path = file_path
         self._size = size
@@ -217,8 +222,9 @@ class RegularFile(File):
     def mode(self):
         return self._mode
 
+
 class PipeFile(File):
-    def __init__(self, pipe_id, flags, id = -1):
+    def __init__(self, pipe_id, flags, id=-1):
         super(PipeFile, self).__init__(id)
         self._pipe_id = pipe_id
         self._flags = flags
@@ -226,23 +232,23 @@ class PipeFile(File):
     @property
     def id(self):
         return self._id
-    
+
     @property
     def pipe_id(self):
         return self._pipe_id
-    
+
     @property
     def flags(self):
         return self._flags
-    
+
 
 class Vma:
     def __init__(self,
-            start=0,
-            end=0,
-            file_path=None,
-            pgoff=None,
-            is_shared=False):
+                 start=0,
+                 end=0,
+                 file_path=None,
+                 pgoff=None,
+                 is_shared=False):
         self._start = start
         self._end = end
         self._file_path = file_path
