@@ -80,6 +80,7 @@ public:
 	{
 		std::stringstream ss;
 		ss << get_tag() << "(pid = " << pid
+		                << ", path = " << path
 		                << ", flags = " << flags
 		                << ", mode = " << mode
 		                << ", offset = " << offset

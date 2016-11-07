@@ -17,8 +17,9 @@ int cmd_reg_open::execute() {
 		return -1;
 	}
 	log_info("opened reg file at [ %d ]; moving to [ %d ]", file_fd, fd);
-	if (move_fd(file_fd, fd) < 0) {
-		log_stderr("Can't move fd");
+	int ret = move_fd(file_fd, fd);
+	if (ret < 0) {
+		log_stderr("Can't move fd [move_fd exit code = %d]", ret);
 		return -1;
 	}
 	if (lseek(fd, offset, SEEK_SET) < 0) {

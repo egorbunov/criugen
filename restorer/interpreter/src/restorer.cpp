@@ -85,6 +85,13 @@ int restorer::accept_node_connection(pid_t pid)
 
 int restorer::run()
 {
+	// close first 3 fd to start with clean FDT!
+	log_info("Cleaning fdt before starting restorer...");
+	if (close(STDIN_FILENO) < 0 || close(STDOUT_FILENO) < 0 || close(STDERR_FILENO) < 0) {
+		log_stderr("Can't clean fdt before start restorer!");
+		return -1;
+	}
+
 	if (setup_child_handler()) {
 		log_stderr("Can't setup child handler");
 		return -1;

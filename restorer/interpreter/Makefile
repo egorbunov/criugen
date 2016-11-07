@@ -14,6 +14,12 @@ RESTORER_OBJECTS = $(RESTORER_SOURCES:$(SRC_DIR)/%.cpp=$(BIN_DIR)/%.o)
 .PHONY: all
 all: $(BIN_DIR)/$(BIN_NAME) $(TESTER)
 
+.PHONY: tester
+tester: $(TESTER)
+	
+.PHONY: restorer
+restorer: $(BIN_DIR)/$(BIN_NAME)
+
 # ======= Json Parser ========
 JSON_LIB_DIR = lib/json11
 
@@ -68,9 +74,6 @@ $(TEST_BIN_DIR)/%.o: $(TEST_DIR)/%.cpp
 $(TESTER): $(TEST_BIN_DIR) $(TEST_OBJECTS) $(RESTORER_OBJECTS) $(GTEST_LIBS)
 	$(CXX) -L$(GTEST_LIB_DIR) $(GTEST_LIBS) $(LDFLAGS) \
 		$(TEST_OBJECTS) $(RESTORER_OBJECTS) -o $@
-
-.PHONY: tester
-tester: $(TESTER)
 # ========= End Tester =========
 
 # ========= Restorer ==========
