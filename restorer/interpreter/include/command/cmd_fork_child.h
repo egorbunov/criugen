@@ -4,6 +4,8 @@
 
 #include "command.h"
 
+
+
 /**
  * Command intended to describe fork system call, when
  * child process with pid `child_pid` forks from it's
@@ -46,7 +48,7 @@ public:
 		return pid;
 	}
 	
-	size_t get_size() override 
+	size_t get_sizeof() override 
 	{
 		return sizeof(cmd_fork_child);
 	}

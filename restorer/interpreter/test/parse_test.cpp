@@ -13,14 +13,14 @@
 #include "parse.h"
 #include "command/commands.h"
 
-static std::shared_ptr<command> parse_one_cmd_prog(std::string& str) 
+static std::unique_ptr<command> parse_one_cmd_prog(std::string& str) 
 {
 	std::stringstream ss(str);
-	std::vector<std::shared_ptr<command>> program;
+	std::vector<std::unique_ptr<command>> program;
 	int err = parse_program(ss, program);
 	assert(err >= 0);
 	assert(program.size() == (size_t) 1);
-	return program[0];
+	return std::move(program[0]);
 }
 
 TEST(parse_test, setsid_parse) 

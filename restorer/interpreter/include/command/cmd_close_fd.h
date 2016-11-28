@@ -32,7 +32,7 @@ public:
 		return pid;
 	}
 
-	size_t get_size() override 
+	size_t get_sizeof() override 
 	{
 		return sizeof(cmd_close_fd);
 	}

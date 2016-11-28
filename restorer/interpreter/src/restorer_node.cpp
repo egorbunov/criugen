@@ -21,21 +21,23 @@ namespace
 	void sigchld_handler(int sig);
 	int setup_child_handler();
 }
-
-std::shared_ptr<char> restorer_node::fetch_command_bytes()
+int restorer_node::fetch_command_bytes(char* buffer, size_t buffer_size)
 {
 	size_t cmd_size;
 	log_info("Fetching command from socket %d...", master_connection);
 	if (io_read<size_t>(master_connection, &cmd_size) < 0) {
 		log_stderr("Can't fetch commnd, failed to read cmd size");
-		return std::shared_ptr<char>();
+		return -1;
 	}
-	std::shared_ptr<char> cmd_buf_sptr { new char[cmd_size], std::default_delete<char[]>() };
-	if (io_read(master_connection, cmd_buf_sptr.get(), cmd_size) < 0) {
+	if (cmd_size > buffer_size) {
+		log_error("Buffer is to small to write command: %d < %d", buffer_size, cmd_size);
+		return -1;
+	}
+	if (io_read(master_connection, buffer, cmd_size) < 0) {
 		log_stderr("Can't fetch command, faild to read cmd bytes");
-		return std::shared_ptr<char>();
+		return -1;
 	}
-	return cmd_buf_sptr;
+	return 0;
 }
 
 int restorer_node::connect_to_master()
@@ -86,15 +88,14 @@ int restorer_node::run()
 	}
 
 	bool command_pending = true;
-
+	auto cmd_buf_ptr = std::make_unique<char[]>(command_max_size());
 	while (command_pending) {
 		log_info("Waiting for command...");
-		auto cmd_b_sptr = fetch_command_bytes();
-		if (!cmd_b_sptr) {
+		if (fetch_command_bytes(cmd_buf_ptr.get(), command_max_size()) < 0) {
 			log_error("Failed to fetch command!");
 			return -1;
 		}
-		auto cmd = ptr_to_command(static_cast<void*>(cmd_b_sptr.get()));
+		auto cmd = ptr_to_command(static_cast<void*>(cmd_buf_ptr.get()));
 		if (cmd->get_owner() != getpid()) {
 			log_error("Got foreign node [ %d ] command", cmd->get_owner());
 			return -1;

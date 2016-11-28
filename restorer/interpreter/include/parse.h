@@ -13,4 +13,4 @@
  *
  * WARNING: all commands are allocated on the heap
  */
-int parse_program(std::istream &in, std::vector<std::shared_ptr<command>>& program);
+int parse_program(std::istream &in, std::vector<std::unique_ptr<command>>& program);

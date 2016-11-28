@@ -1,7 +1,7 @@
 BIN_NAME := restorer
 BIN_DIR := ./bin
 CXX := g++
-CXXFLAGS += -Wall -Werror -Wextra -std=c++11 -pedantic-errors -pthread
+CXXFLAGS += -Wall -Werror -Wextra -std=c++14 -pedantic-errors -pthread
 LDFLAGS += -L/usr/local/lib -lpthread -Wl,-rpath,/usr/local/lib
 SRC_DIR := src
 TEST_DIR := test

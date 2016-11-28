@@ -46,7 +46,7 @@ int main(int argc, char* argv[])
 
 	log::log_setup(log_file);
 	std::ifstream in(program_file);
-	std::vector<std::shared_ptr<command>> program;
+	std::vector<std::unique_ptr<command>> program;
 	if (parse_program(in, program) < 0) {
 		std::cout << "ERROR: Can't parse program!" << std::endl;
 		return -1;

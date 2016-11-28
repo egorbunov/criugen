@@ -19,7 +19,7 @@ struct command
 	/**
 	 * @return sizeof of the command structure
 	 */
-	virtual size_t get_size() = 0;
+	virtual size_t get_sizeof() = 0;
 
 	/**
 	 * @return command name (tag)

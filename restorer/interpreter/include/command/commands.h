@@ -15,6 +15,11 @@
 void* command_ptr_get(command* cmd);
 
 /**
+ * Returns size of the largest command
+ */
+size_t command_max_size();
+
+/**
  * dirty cast wrapper
  */
 command* ptr_to_command(void* cmd_ptr);

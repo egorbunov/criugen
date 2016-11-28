@@ -143,7 +143,7 @@ int restorer::send_command(command* cmd)
 	log_info("Sending command [ %s ] to [ %d ]", cmd->get_tag().c_str(), cmd->get_owner());
 
 	int conn = connections[cmd->get_owner()]; // TODO: consider error no key
-	auto cmd_size = cmd->get_size();
+	auto cmd_size = cmd->get_sizeof();
 	if (io_write(conn, cmd_size) < 0) {
 		log_stderr("Can't send command size through socket");
 		return -1;

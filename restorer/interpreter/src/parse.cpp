@@ -19,7 +19,7 @@ static cmd_fini* parse_cmd_fini(const json11::Json&);
 static cmd_create_thread* parse_create_thread(const json11::Json&);
 static cmd_duplicate_fd* parse_duplicate_fd(const json11::Json&);
 
-int parse_program(std::istream &in, std::vector<std::shared_ptr<command>>& program)
+int parse_program(std::istream &in, std::vector<std::unique_ptr<command>>& program)
 {
 	std::string program_str(std::istreambuf_iterator<char>(in), {});
 	std::string err;
@@ -55,7 +55,7 @@ int parse_program(std::istream &in, std::vector<std::shared_ptr<command>>& progr
 			log::log_error("Command not parsed");
 			return -1;
 		}
-		program.push_back(std::shared_ptr<command>(cmd));
+		program.push_back(std::unique_ptr<command>(cmd));
 	}
 	return 0;
 }
