@@ -23,6 +23,7 @@ $BIN "${LOGFILE}" "${TESTFILE}" &
 sleep 1
 
 PID=$(cat "$LOGFILE" | head -n 1)
+cat /proc/${PID}/maps && \
 echo "Dumping...${PID}" && \
 sudo criu dump -t "$PID" -D "$DUMPDIR" -vvv -o dump.log && \
 echo "OK" && \
