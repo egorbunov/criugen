@@ -1,74 +1,13 @@
-from collections import defaultdict
-from copy import copy
 import json
-import functools
 
 import nodes
-
-
-class Cmd():
-    @staticmethod
-    def setsid(pid):
-        return {
-            "#command": "SETSID",
-            "pid": pid
-        }
-
-    @staticmethod
-    def fork_child(pid, child_pid, max_fd):
-        return {
-            "#command": "FORK_CHILD",
-            "pid": pid,
-            "child_pid": child_pid,
-            "max_fd": max_fd
-        }
-
-    @staticmethod
-    def create_thread(pid, tid):
-        return {
-            "#command": "CREATE_THREAD",
-            "pid": pid,
-            "tid": tid
-        }
-
-    @staticmethod
-    def reg_open(pid, fd, reg_file):
-        return {
-            "#command": "REG_OPEN",
-            "pid": pid,
-            "path": reg_file.file_path.path,
-            "flags": reg_file.flags,
-            "mode": reg_file.mode,
-            "offset": reg_file.pos,
-            "fd": fd
-        }
-
-    @staticmethod
-    def close_fd(pid, fd):
-        return {
-            "#command": "CLOSE_FD",
-            "pid": pid,
-            "fd": fd
-        }
-
-    @staticmethod
-    def duplicate_fd(pid, old_fd, new_fd):
-        return {
-            "#command": "DUP_FD",
-            "pid": pid,
-            "old_fd": old_fd,
-            "new_fd": new_fd
-        }
-
-    @staticmethod
-    def fini_cmd(pid):
-        return {
-            "#command": "FINI_CMD",
-            "pid": pid
-        }
+import command
 
 
 class ProgramBuilder:
+    def __init__(self):
+        pass
+
     def write_program(self, app, program_path):
         program = self.generate_program(app)
         with open(program_path, "w") as out:
@@ -91,8 +30,8 @@ class ProgramBuilder:
         def add_cmd(cmd):
             programs[int(cmd["pid"])].append(cmd)
 
-        # ====== setsid root process ===== TODO: does is always makes sense?
-        add_cmd(Cmd.setsid(app.get_real_root().pid));
+        # ====== setsid root process ===== TODO: does it always makes sense?
+        add_cmd(command.setsid(app.get_real_root().pid))
 
         # ====== dealing with regular file descriptors =======
         def process_reg_files(process):
@@ -132,7 +71,7 @@ class ProgramBuilder:
             # is better for now
             for f in cur_files:
                 if f in process.file_map and not process.file_map[f].intersection(cur_files[f]):
-                    add_cmd(Cmd.duplicate_fd(process.pid, next(iter(cur_files[f])), free_fd))
+                    add_cmd(command.duplicate_fd(process.pid, next(iter(cur_files[f])), free_fd))
                     add_fd(free_fd, f)
                     free_fd += 1
 
@@ -150,29 +89,29 @@ class ProgramBuilder:
                 if fd in cur_fdt and cur_fdt[fd] != f:
                     if f not in cur_files:
                         # f is not opened at all
-                        add_cmd(Cmd.close_fd(process.pid, fd))
-                        add_cmd(Cmd.reg_open(process.pid, fd, f))
+                        add_cmd(command.close_fd(process.pid, fd))
+                        add_cmd(command.reg_open(process.pid, fd, f))
                     else:
                         # f is opened but at another fd
                         ofd = next(iter(cur_files[f]))
-                        add_cmd(Cmd.duplicate_fd(process.pid, ofd, fd))
+                        add_cmd(command.duplicate_fd(process.pid, ofd, fd))
                     del_fd(fd)
                     add_fd(fd, f)
 
                 elif fd not in cur_fdt and process.fdt[fd] in cur_files:
                     ofd = next(iter(cur_files[f]))
-                    add_cmd(Cmd.duplicate_fd(process.pid, ofd, fd))
+                    add_cmd(command.duplicate_fd(process.pid, ofd, fd))
                     add_fd(fd, f)
 
                 elif fd not in cur_fdt and process.fdt[fd] not in cur_files:
-                    add_cmd(Cmd.reg_open(process.pid, fd, f))
+                    add_cmd(command.reg_open(process.pid, fd, f))
                     add_fd(fd, f)
 
             # closing everything not opened in cur proc
             # temporary file links are closed here too
             for fd, f in cur_fdt.iteritems():
                 if fd not in process.fdt:
-                    add_cmd(Cmd.close_fd(process.pid, fd))
+                    add_cmd(command.close_fd(process.pid, fd))
 
         # ========= reg_files processing end =========
 
@@ -182,7 +121,7 @@ class ProgramBuilder:
         # adding child forking as last command to every process program
         def forks_dfs(process):
             max_fd = max(process.fdt) if process.fdt else 3  # TODO: refactor this duplicating code
-            add_cmd(Cmd.fork_child(process.ppid, process.pid, max_fd))
+            add_cmd(command.fork_child(process.ppid, process.pid, max_fd))
             for ch in app.get_children(process):
                 forks_dfs(ch)
 
@@ -190,7 +129,7 @@ class ProgramBuilder:
 
         # adding fini command
         for p in app.get_all_processes():
-            add_cmd(Cmd.fini_cmd(p.pid))
+            add_cmd(command.fini_cmd(p.pid))
 
         # concatenate per process programs into final one
         def concat_programs(process, program=None):

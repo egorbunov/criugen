@@ -1,12 +1,14 @@
-import os
-import json
 import glob
+import json
+import os
 
 import pycriu
-import nodes
+
+import crconstants
+import crdata
 
 
-def load_img(img_path):
+def __load_img(img_path):
     with open(img_path, "r") as f:
         try:
             return pycriu.images.load(f, True)
@@ -15,15 +17,15 @@ def load_img(img_path):
             return None
 
 
-def load_json(img_path):
+def __load_json(img_path):
     with open(img_path, "r") as f:
         return json.load(f)
 
 
-def load_item(source_path, item_name, item_type):
+def __load_item(source_path, item_name, item_type):
     loaders = {
-        "img": load_img,
-        "json": load_json
+        "img": __load_img,
+        "json": __load_json
     }
 
     if item_type not in loaders:
@@ -35,105 +37,139 @@ def load_item(source_path, item_name, item_type):
     return loaders[item_type](img_path)
 
 
-def load(source_path, item_type):
+def __parse_one_reg_file(entry):
+    size = None if "size" not in entry else entry["size"]
+    flags = [s.strip() for s in entry["flags"].split("|")]
+    return crdata.RegFile(path=entry["name"],
+                          size=size,
+                          pos=entry["pos"],
+                          flags=flags,
+                          mode=entry["mode"])
+
+
+def __parse_reg_files(reg_files_item):
+    return {entry["id"]: __parse_one_reg_file(entry) for entry in reg_files_item["entries"]}
+
+
+def __parse_one_pipe_file(entry):
+    flags = [s.strip() for s in entry["flags"].split("|")]
+    return crdata.PipeFile(id=entry["pipe_id"], flags=flags)
+
+
+def __parse_pipe_files(pipe_files_item):
+    return {entry["id"]: __parse_one_pipe_file(entry) for entry in pipe_files_item["entries"]}
+
+
+def __parse_one_vma(e):
+    return crdata.VmArea(
+        start=e['start'],
+        end=e['end'],
+        pgoff=e['pgoff'],
+        shmid=e['shmid'],
+        prot=[s.strip() for s in e['prot'].split("|")],
+        flags=[s.strip() for s in e['flags'].split("|")],
+        status=e['status'],
+        fd=e['fd'],
+        fdflags=e['fdflags'] if 'fdflags' in e else None
+    )
+
+
+def __parse_vm_info(e):
+    return crdata.VmInfo(
+        arg_start=e['mm_arg_start'],
+        arg_end=e['mm_arg_end'],
+        brk=e['mm_brk'],
+        env_start=e['mm_env_start'],
+        env_end=e['mm_env_end'],
+        code_start=e['mm_start_code'],
+        code_end=e['mm_end_code'],
+        data_start=e['mm_start_data'],
+        data_end=e['mm_end_data'],
+        brk_start=e['mm_start_brk'],
+        stack_start=e['mm_start_stack'],
+        dumpable=e['dumpable'],
+        exe_file_id=e['exe_file_id'],
+        saved_auxv=e['mm_saved_auxv']
+    )
+
+
+def __parse_mm(mm_item):
+    """
+    :param mm_item: item loaded from mm-{pid} image
+    :return: (VmInfo, array of VmArea)
+    """
+    vm_info = __parse_vm_info(mm_item['entries'][0])
+    vmas = [__parse_one_vma(e) for e in mm_item['entries'][0]['vmas']]
+    return vm_info, vmas
+
+
+def __parse_one_process(process_item, source_path, image_type):
+    pid = process_item["pid"]
+    ppid = process_item["ppid"]
+    pgid = process_item["pgid"]
+    sid = process_item["sid"]
+    threads = process_item["threads"]
+
+    core_item = __load_item(source_path, "core-{}".format(pid), image_type)
+    p_state = core_item["entries"][0]["tc"]["task_state"]
+    if p_state == crconstants.TASK_STATE_DEAD:
+        # dead task (as I got it's zombie) is empty one...
+        return crdata.Process(pid=pid, ppid=ppid, pgid=pgid,
+                              sid=sid, state=p_state, threads_ids=threads,
+                              fdt={}, ids={}, vmas=[], vm_info={})
+
+    ids_item = __load_item(source_path, "ids-{}".format(pid), image_type)
+    ids = ids_item["entries"][0]
+
+    p_fdt = {}
+    fd_info_item = __load_item(source_path, "fdinfo-{}".format(ids["files_id"]), image_type)
+    if fd_info_item is not None:
+        p_fdt = {e["id"]: e["fd"] for e in fd_info_item["entries"]}
+
+    mm_item = __load_item(source_path, "mm-{}".format(pid), image_type)
+    p_vminfo, p_vmas = __parse_mm(mm_item)
+
+    pagemap_item = __load_item(source_path, "pagemap-{}".format(pid), image_type)
+    sigacts_item = __load_item(source_path, "sigacts-{}".format(pid), image_type)
+    fs_item = __load_item(source_path, "fs-{}".format(pid), image_type)
+
+    return crdata.Process(pid=pid, ppid=ppid, pgid=pgid,
+                          sid=sid, threads_ids=threads,
+                          state=p_state, fdt=p_fdt, ids={}, vmas=p_vmas,
+                          vm_info=p_vminfo)
+
+
+def __load_processes(source_path, image_type):
+    # reading every process specific data
+    processes_item = __load_item(source_path, "pstree", image_type)
+    return [__parse_one_process(e, source_path, image_type)
+            for e in processes_item["entries"]]
+
+
+def load(source_path, image_type):
+    """
+    :param source_path: path to images
+    :param image_type: image extension
+    """
     available_imgs = [os.path.splitext(os.path.basename(s))[0]
-                      for s in glob.glob(os.path.join(source_path, "*.{}".format(item_type)))]
+                      for s in glob.glob(os.path.join(source_path, "*.{}".format(image_type)))]
 
-    processes = []
-    files = {}
-
-    def load_reg_files(img):
-        file_paths = {}
-        reg_files_item = load_item(source_path, img, item_type)
-        for entry in reg_files_item["entries"]:
-            if entry["name"] not in file_paths:
-                file_paths[entry["name"]] = nodes.FilePath(entry["name"])
-            if "size" not in entry:
-                size = None
-            else:
-                size = entry["size"]
-            flags = [s.strip() for s in entry["flags"].split("|")]
-            rf = nodes.RegularFile(file_path=file_paths[entry["name"]],
-                                   size=size,
-                                   pos=entry["pos"],
-                                   flags=flags,
-                                   mode=entry["mode"])
-            files[entry["id"]] = rf
-
+    reg_files = {}
     if "reg-files" in available_imgs:
-        load_reg_files("reg-files")
+        reg_files_item = __load_item(source_path, "reg-files", image_type)
+        reg_files = __parse_reg_files(reg_files_item)
 
-    def load_pipes(img):
-        pipes_item = load_item(source_path, img, item_type)
-        for entry in pipes_item["entries"]:
-            flags = [s.strip() for s in entry["flags"].split("|")]
-            pf = nodes.PipeFile(pipe_id=entry["pipe_id"], flags=flags)
-            files[entry["id"]] = pf
-
+    pipe_files = {}
     if "pipes" in available_imgs:
-        load_pipes("pipes")
+        item = __load_item(source_path, "pipes", image_type)
+        pipe_files = __parse_pipe_files(item)
+
+    files = dict(reg_files.items() + pipe_files.items())
 
     # reading every process specific data
-    pstree_item = load_item(source_path, "pstree", item_type)
-    for entry in pstree_item["entries"]:
-        process = nodes.Process(pid=entry["pid"],
-                                ppid=entry["ppid"])
-        processes.append(process)
-        for t in entry["threads"]:
-            if t != 0:
-                process.add_thread(t)
-
-        core_item = load_item(source_path, "core-{}".format(entry["pid"]), item_type)
-        core_entry = core_item["entries"][0]
-        process.state = core_entry["tc"]["task_state"]
-        # ids and mm (and ...) images are not stored for dead process
-        if process.state == nodes.TaskState.DEAD:
-            continue
-
-        ids_item = load_item(source_path, "ids-{}".format(entry["pid"]), item_type)
-        files_id = ids_item["entries"][0]["files_id"]
-
-        # if no file descriptors fdinfo file is not created
-        fd_info_item = load_item(source_path, "fdinfo-{}".format(files_id), item_type)
-        if fd_info_item is not None:
-            for fd_entry in fd_info_item["entries"]:
-                process.add_file_descriptor(fd_entry["fd"], files[fd_entry["id"]])
-
-        mm_item = load_item(source_path, "mm-{}".format(entry["pid"]), item_type)
-        vma_items = mm_item["entries"][0]["vmas"]
-        tmp_files = {}
-        for vma_item in vma_items:
-            flags = vma_item["flags"]
-            if "MAP_PRIVATE" in flags:
-                is_shared = False
-            elif "MAP_SHARED" in flags:
-                is_shared = True
-            else:
-                raise RuntimeError("Flags {} is not recoginzed".format(flags))
-            is_anon = "MAP_ANON" in flags
-            start = vma_item["start"]
-            end = vma_item["end"]
-            pgoff = vma_item["pgoff"]
-            if is_anon and is_shared:
-                shmid = vma_item["shmid"]
-                if shmid not in tmp_files:
-                    tmp_file = nodes.FilePath("/tmp/{}".format(vma_item["shmid"]))
-                    tmp_files[shmid] = tmp_file
-                vma = nodes.Vma(start, end, tmp_files[shmid], None, is_shared)
-            elif not is_anon:
-                shmid = vma_item["shmid"]
-                vma = nodes.Vma(start, end, files[shmid].file_path, pgoff, is_shared)
-            else:
-                vma = nodes.Vma(start, end, None, None, is_shared)
-            process.add_vma(vma)
-
-    # assuming that processes in image are listed so child process always goes after parent
-    root = next(p for p in processes if p.ppid == 0)
-    app = nodes.Application(root)
-    for p in processes:
-        if p != root:
-            app.add_process(p)
-    return app
+    # pstree_item = __load_item(source_path, "pstree", image_type)
+    processes = __load_processes(source_path, image_type)
+    return crdata.App(processes, files)
 
 
 def load_from_jsons(source_path):
