@@ -98,7 +98,7 @@ int restorer::run()
 	}
 	for (auto& scmd : program) {
 		auto cmd = scmd.get();
-		// commands may be adressed to master restorer
+		// commands may be addressed to master restorer
 		if (scmd->get_tag() == cmd_fork_child::tag) {
 			auto fork_cmd = dynamic_cast<cmd_fork_child*>(cmd);
 			pid_t child = fork_cmd->get_child_pid();
@@ -163,7 +163,7 @@ namespace
 	    pid_t p;
 	    int status;
 	    while ((p = waitpid(-1, &status, WNOHANG)) != -1) {
-	    	log_info("Child dead [ %d ] catched", p);
+	    	log_info("Child dead [ %d ] caught", p);
 	    }
 	    (void) sig;
 	}

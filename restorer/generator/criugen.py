@@ -15,6 +15,9 @@ def main(args):
 
     print('Loading images from: "{}" ...'.format(args[1]))
     application = loader.load_from_imgs(args[1])
+
+    pp = generator.generate_program(app=application)
+
     pb = generator.ProgramBuilder()
     print('Generating program...')
     program = pb.generate_program(application)

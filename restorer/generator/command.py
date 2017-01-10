@@ -26,7 +26,7 @@ def reg_open(pid, fd, reg_file):
     return {
         "#command": "REG_OPEN",
         "pid": pid,
-        "path": reg_file.file_path.path,
+        "path": reg_file.path,
         "flags": reg_file.flags,
         "mode": reg_file.mode,
         "offset": reg_file.pos,
