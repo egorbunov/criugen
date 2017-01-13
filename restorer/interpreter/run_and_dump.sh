@@ -1,8 +1,8 @@
 PROGRAM_FILE=$1
-FIN_PROG=bin/fin_prog.json
-LOG_FILE=bin/restore.log
-DUMPDIR=bin/dump
-JSONDIR=bin/jsondump
+FIN_PROG=build/fin_prog.json
+LOG_FILE=build/restore.log
+DUMPDIR=build/dump
+JSONDIR=build/jsondump
 TOJSONBIN=$(pwd)/../../tools/crtojson.sh
 GENERATOR=$(pwd)/../generator/criugen.py
 
@@ -11,7 +11,7 @@ echo Killing processes... && \
 
 sudo rm -f $LOG_FILE && \
 touch $LOG_FILE && \
-sudo bin/restorer -l $LOG_FILE $PROGRAM_FILE && \
+sudo build/restorer -l $LOG_FILE $PROGRAM_FILE && \
 sleep 2 && \
 cat $LOG_FILE | ccze -A
 ROOT_PID=$(./get_root_pid.py $PROGRAM_FILE)
