@@ -16,18 +16,14 @@ def main(args):
     print('Loading images from: "{}" ...'.format(args[1]))
     application = loader.load_from_imgs(args[1])
 
-    pp = generator.generate_program(app=application)
-
-    pb = generator.ProgramBuilder()
     print('Generating program...')
-    program = pb.generate_program(application)
+    program = generator.generate_program(app=application)
     print('OK')
     if len(args) == 3:
         with open(args[2], 'w') as f:
             json.dump(program, f, indent=4, sort_keys=True)
     else:
         print(json.dumps(program, sort_keys=True, indent=4, separators=(',', ': ')))
-
     exit(0)
 
 

@@ -124,7 +124,7 @@ def __parse_one_process(process_item, source_path, image_type):
     p_fdt = {}
     fd_info_item = __load_item(source_path, "fdinfo-{}".format(ids["files_id"]), image_type)
     if fd_info_item is not None:
-        p_fdt = {e["id"]: e["fd"] for e in fd_info_item["entries"]}
+        p_fdt = {e["fd"]: e["id"] for e in fd_info_item["entries"]}
 
     mm_item = __load_item(source_path, "mm-{}".format(pid), image_type)
     p_vminfo, p_vmas = __parse_mm(mm_item)
