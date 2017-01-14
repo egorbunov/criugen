@@ -3,8 +3,8 @@
 import json
 import sys
 
-import generator
-import loader
+from criugen import loader
+from criugen import generator
 
 
 def main(args):

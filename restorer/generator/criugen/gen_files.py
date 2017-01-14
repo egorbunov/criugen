@@ -1,61 +1,31 @@
 import command
 import crdata
-import itertools
 
 
-def generate_program(app):
+def handle_regular_files(app):
     """
-    Generates and returns linearized program for process tree restoration
-    :param app: application (instance of crdata.App)
-    :return:
+    Generates proper commands for processes in given application (process tree)
+    to restore regular file descriptors table
+
+    :type app: crdata.App
+    :param app: application, for that commands will be generated
+    :return: dictionary with structure: {pid: [command]}, i.e. for every pid
+    you'll have list of commands
     """
-
-    # For now program can be divided into parts, where each part is
-    # list of consequent commands which must be executed within context
-    # of one process. Such part starts with command FORK_CHILD or FORK_ROOT.
-    # So every such part is corresponds to process with some PID. Parent
-    # process commands are always placed above child process commands.
-
-    setsid_cmds = __handle_sessions(app)
-    reg_files_cmds = __handle_regular_files(app)
-    forks_cmds = __handle_forks(app)
-    final_programs = __join_programs(app, setsid_cmds, reg_files_cmds, forks_cmds)
-
-    def concat_programs(process, program=None):
-        if program is None:
-            program = []
-        program.extend(final_programs[process.pid])
-        for ch in app.process_children(process):
-            concat_programs(ch, program)
-        return program
-
-    return concat_programs(app.process_parent(app.root_process()))
-
-
-def __join_programs(app, *args):
-    pstree_pids = {p.pid for p in app.processes}
-    all_pids = {0} | pstree_pids
-    final = {pid: list(itertools.chain(*map(lambda x: x.get(pid, []), args)))
-             for pid in all_pids}
-    for p in pstree_pids:
-        final[p].append(command.fini_cmd(p))
-    return final
-
-
-def __handle_regular_files(app):
     return {p.pid: __handle_regular_files_one_process(app, p) for p in app.processes}
 
 
-def __handle_sessions(app):
-    cmds = {}
-    for p in app.processes:
-        cmds[p.pid] = []
-        if p.sid == p.pid:
-            cmds[p.pid].append(command.setsid(p.pid))
-    return cmds
-
-
 def __handle_regular_files_one_process(app, process):
+    """
+    :type app: crdata.App
+    :param app: application
+
+    :type process: crdata.Process
+    :param process: process, for which commands for regular files fdt restoration
+    will be generated
+
+    :return: list of commands
+    """
     program = []
     parent = app.process_parent(process)
 
@@ -139,17 +109,3 @@ def __handle_regular_files_one_process(app, process):
             program.append(command.close_fd(process.pid, fd))
 
     return program
-
-
-def __handle_forks(app):
-    cmds = {}
-    for p in app.processes:
-        if p.ppid not in cmds:
-            cmds[p.ppid] = []
-        max_fd = max(p.fdt) if p.fdt else 3
-        cmds[p.ppid].append(command.fork_child(p.ppid, p.pid, max_fd))
-    return cmds
-
-
-def __handle_vm(app):
-    return {p.pid: [] for p in app.processes}
