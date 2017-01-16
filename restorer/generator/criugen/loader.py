@@ -66,9 +66,9 @@ def __parse_one_vma(e):
         end=e['end'],
         pgoff=e['pgoff'],
         shmid=e['shmid'],
-        prot=[s.strip() for s in e['prot'].split("|")],
-        flags=[s.strip() for s in e['flags'].split("|")],
-        status=e['status'],
+        prot=set([s.strip() for s in e['prot'].split("|")]),
+        flags=set([s.strip() for s in e['flags'].split("|")]),
+        status=set([s.strip() for s in e['status'].split("|")]),
         fd=e['fd'],
         fdflags=e['fdflags'] if 'fdflags' in e else None
     )
@@ -99,7 +99,7 @@ def __parse_mm(mm_item):
     :return: (VmInfo, array of VmArea)
     """
     vm_info = __parse_vm_info(mm_item['entries'][0])
-    vmas = [__parse_one_vma(e) for e in mm_item['entries'][0]['vmas']]
+    vmas = [(idx + 1, __parse_one_vma(e)) for idx, e in enumerate(mm_item['entries'][0]['vmas'])]
     return vm_info, vmas
 
 

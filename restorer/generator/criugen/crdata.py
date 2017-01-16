@@ -12,7 +12,8 @@ Process = collections.namedtuple('Process', [
     'threads_ids',  # set of thread ids
     'fdt',          # file descriptor table: map from file descriptor to file id
     'vm_info',      # global vm info (start and end addresses of segments and other stuff)
-    'vmas',         # array of VmArea structs, describing mappings in process vm
+    'vmas',         # array of pairs (id, VmArea structure), describing mappings in process vm
+                    # id is just an identifier of VMA, ids are per process, not per application
     'ids'           # various ids for process like it's namespace ids
 ])
 
@@ -63,8 +64,8 @@ VmArea = collections.namedtuple('VmArea', [
     'end',
     'pgoff',
     'shmid',
-    'prot',
-    'flags',
+    'prot',   # set of strings
+    'flags',  # set of strings
     'status',
     'fd',
     'fdflags'
@@ -134,6 +135,3 @@ class App:
         :return: list of process child processes
         """
         return self.__proc_children[proc.pid]
-
-
-
