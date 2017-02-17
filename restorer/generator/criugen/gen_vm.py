@@ -34,3 +34,17 @@ def handle_vm(app):
 
     return {p.pid: [] for p in app.processes}
 
+
+def __handle_cow_mappings(app):
+    pass
+
+
+def __handle_cow_mappings_proc(proc):
+    pass
+
+
+def __gen_register_vma(app):
+    """
+    generating commands for registering VMAs
+    """
+    pass

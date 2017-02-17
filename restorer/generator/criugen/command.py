@@ -80,18 +80,6 @@ def fini_cmd(pid):
     }
 
 
-def cleanup_restorer_vm(pid):
-    """
-    command, which tells interpreter to cleanup all it's own virtual
-    memory mappings (interpreter will run special restorer executable in place, which
-    do not collide with mappings of target process).
-    """
-    return {
-        "#command": "CLEANUP_RESTORER_VM",  # like switching to special restorer context
-        "pid": pid
-    }
-
-
 def register_vma(pid, vma_id, vma, fd=-1):
     """
     Command, which tells interpreter about vma in target process (just registering it)
@@ -113,6 +101,18 @@ def register_vma(pid, vma_id, vma, fd=-1):
         "status": list(vma.status),
         "fd": fd,
         "fd_flags": vma.fdflags,
+    }
+
+
+def cleanup_restorer_vm(pid):
+    """
+    command, which tells interpreter to cleanup all it's own virtual
+    memory mappings (interpreter will run special restorer executable in place, which
+    do not collide with mappings of target process).
+    """
+    return {
+        "#command": "CLEANUP_RESTORER_VM",  # like switching to special restorer context
+        "pid": pid
     }
 
 
