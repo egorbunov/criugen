@@ -9,7 +9,7 @@ import gen_forks
 def generate_program(app):
     """
     Generates and returns linearized program for process tree restoration
-    :param app: application (instance of crdata.App)
+    :param app: application (instance of model.crdata.App)
     :return: program == list of commands, each command is dictionary (see command file)
     """
 

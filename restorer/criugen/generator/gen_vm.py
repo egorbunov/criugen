@@ -1,4 +1,4 @@
-import crdata
+from model import crdata
 
 
 def handle_vm(app):

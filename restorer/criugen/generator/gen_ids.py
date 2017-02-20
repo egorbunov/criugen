@@ -1,5 +1,5 @@
 import command
-import crdata
+from model import crdata
 
 
 def handle_sessions(app):

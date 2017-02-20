@@ -1,26 +1,34 @@
 import collections
 
 """
-Process data holder
+Process data structure
 """
 Process = collections.namedtuple('Process', [
-    'pid',          # process id
-    'ppid',         # process parent id
-    'pgid',         # process group id
-    'sid',          # process session id
-    'state',        # process state
+    'pid',  # process id
+    'ppid',  # process parent id
+    'pgid',  # process group id
+    'sid',  # process session id
+    'state',  # process state
     'threads_ids',  # set of thread ids
-    'fdt',          # file descriptor table: map from file descriptor to file id
-    'vm_info',      # global vm info (start and end addresses of segments and other stuff)
-    'vmas',         # array of pairs (id, VmArea structure), describing mappings in process vm
-                    # id is just an identifier of VMA, ids are per process, not per application
-    'ids'           # various ids for process like it's namespace ids
+    'fdt',  # file descriptor table: map from file descriptor to file id
+    'vm_info',  # global vm info (start and end addresses of segments and other stuff)
+
+    """
+    array of pairs (id, VmArea structure), describing mappings in process vm
+    id is just an identifier of VMA, ids are per process, not per application
+    """
+    'vmas',
+
+    'ids',  # various ids for process like it's namespace ids
+    'page_map'  # map of pages to fill in target process VM
+
 ])
 
 """
 Regular file
 """
 RegFile = collections.namedtuple('RegFile', [
+    'id',
     'path',
     'size',
     'pos',
@@ -64,11 +72,19 @@ VmArea = collections.namedtuple('VmArea', [
     'end',
     'pgoff',
     'shmid',
-    'prot',   # set of strings
+    'prot',  # set of strings
     'flags',  # set of strings
     'status',
     'fd',
     'fdflags'
+])
+
+"""
+Map of pages to fill in a target process address space
+"""
+PageMap = collections.namedtuple('PageMap', [
+    'pages_id',  # id to identify file, where raw pages are stored
+    'maps'  # list of entries { "vaddr": ..., "nr_pages": ... }
 ])
 
 
@@ -96,6 +112,7 @@ class App:
             if p.pid not in acc:
                 acc[p.pid] = []
             return acc
+
         self.__proc_children = reduce(children_construct, self.__all_procs, {})
 
         def proc_files_construct(p):
@@ -105,6 +122,7 @@ class App:
                     files_map[fid] = set()
                 files_map[fid].add(fd)
             return files_map
+
         self.__proc_files = {p.pid: proc_files_construct(p) for p in self.__all_procs}
 
     def root_process(self):

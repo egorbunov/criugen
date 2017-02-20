@@ -40,7 +40,8 @@ def __load_item(source_path, item_name, item_type):
 def __parse_one_reg_file(entry):
     size = None if "size" not in entry else entry["size"]
     flags = [s.strip() for s in entry["flags"].split("|")]
-    return crdata.RegFile(path=entry["name"],
+    return crdata.RegFile(id=entry["id"],
+                          path=entry["name"],
                           size=size,
                           pos=entry["pos"],
                           flags=flags,
@@ -103,6 +104,16 @@ def __parse_mm(mm_item):
     return vm_info, vmas
 
 
+def __parse_pagemap(pagemap_item):
+    """
+    :param pagemap_item: item loaded from pagemap-{pid} image or from pagemap-shmem-{shmid} image
+    """
+    return crdata.PageMap(
+        pages_id=pagemap_item['entries'][0]['pages_id'],
+        maps=pagemap_item['entries'][1:]
+    )
+
+
 def __parse_one_process(process_item, source_path, image_type):
     pid = process_item["pid"]
     ppid = process_item["ppid"]
@@ -111,9 +122,10 @@ def __parse_one_process(process_item, source_path, image_type):
     threads = process_item["threads"]
 
     core_item = __load_item(source_path, "core-{}".format(pid), image_type)
+
     p_state = core_item["entries"][0]["tc"]["task_state"]
     if p_state == crconstants.TASK_STATE_DEAD:
-        # dead task (as I got it's zombie) is empty one...
+        # dead task (as I got it's a zombie) is empty one...
         return crdata.Process(pid=pid, ppid=ppid, pgid=pgid,
                               sid=sid, state=p_state, threads_ids=threads,
                               fdt={}, ids={}, vmas=[], vm_info={})
@@ -130,13 +142,15 @@ def __parse_one_process(process_item, source_path, image_type):
     p_vminfo, p_vmas = __parse_mm(mm_item)
 
     pagemap_item = __load_item(source_path, "pagemap-{}".format(pid), image_type)
+    pagemap = __parse_pagemap(pagemap_item)
+
     sigacts_item = __load_item(source_path, "sigacts-{}".format(pid), image_type)
     fs_item = __load_item(source_path, "fs-{}".format(pid), image_type)
 
     return crdata.Process(pid=pid, ppid=ppid, pgid=pgid,
                           sid=sid, threads_ids=threads,
                           state=p_state, fdt=p_fdt, ids={}, vmas=p_vmas,
-                          vm_info=p_vminfo)
+                          vm_info=p_vminfo, page_map=pagemap)
 
 
 def __load_processes(source_path, image_type):

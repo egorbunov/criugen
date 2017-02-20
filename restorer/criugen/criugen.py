@@ -3,8 +3,8 @@
 import json
 import sys
 
-from criugen import loader
-from criugen import generator
+from model import loader
+from generator import gen
 
 
 def main(args):
@@ -17,7 +17,7 @@ def main(args):
     application = loader.load_from_imgs(args[1])
 
     print('Generating program...')
-    program = generator.generate_program(app=application)
+    program = gen.generate_program(app=application)
     print('OK')
     if len(args) == 3:
         with open(args[2], 'w') as f:

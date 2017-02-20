@@ -1,5 +1,5 @@
 import command
-import crdata
+from model import crdata
 
 
 def handle_regular_files(app):
@@ -72,7 +72,7 @@ def __handle_regular_files_one_process(app, process):
     # fixing fds
     for fd, fid in process.fdt.iteritems():
         f = app.file_by_id(fid)
-        if not isinstance(f, crdata.RegFile):
+        if not isinstance(f, criu.RegFile):
             continue
 
         # file is already opened at proper fd in parent process
