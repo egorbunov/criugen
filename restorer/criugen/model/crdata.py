@@ -10,7 +10,7 @@ Process = collections.namedtuple('Process', [
     'sid',  # process session id
     'state',  # process state
     'threads_ids',  # set of thread ids
-    'fdt',  # file descriptor table: map from file descriptor to file id
+    'fdt',  # file descriptor table: map (dict) from file descriptor to file id
     'vm_info',  # global vm info (start and end addresses of segments and other stuff)
 
     """
@@ -87,14 +87,33 @@ PageMap = collections.namedtuple('PageMap', [
     'maps'  # list of entries { "vaddr": ..., "nr_pages": ... }
 ])
 
+"""
+Shared Anonymous Memory record, it is described here only by it's id and pagemap;
+It's relation to any of VMA structs is not handled here explicitly (only implicitly,
+with shmid)
+"""
+SharedAnonMem = collections.namedtuple('SharedAnonMem', [
+    'id',  # id of shared memory
+    'pagemap'  # page map for this shared anon memory, that is PageMap instance
+])
+
+AppTuple = collections.namedtuple('App', [
+    'processes',
+    'regular_files',
+    'pipe_files',
+    'shared_anon_mem'
+])
+
 
 class App:
     def __init__(self,
                  processes,
-                 files):
+                 files,
+                 shared_anon_mems):
         """
         :param processes: list of processes
         :param files:  map from file id to file structure
+        :param shared_anon_mems map from shmid to SharedAnonMem structure
         """
         self.processes = processes
         self.files = files
@@ -124,6 +143,7 @@ class App:
             return files_map
 
         self.__proc_files = {p.pid: proc_files_construct(p) for p in self.__all_procs}
+        self.__shared_anon_mem_records = shared_anon_mems
 
     def root_process(self):
         return self.__root

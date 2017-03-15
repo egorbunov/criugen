@@ -49,6 +49,11 @@ def __parse_one_reg_file(entry):
 
 
 def __parse_reg_files(reg_files_item):
+    """
+    Parses reg-files image
+    :param reg_files_item: item, loaded from reg-files image
+    :return: dictionary of file ids pointing to crdata.RegFile structure
+    """
     return {entry["id"]: __parse_one_reg_file(entry) for entry in reg_files_item["entries"]}
 
 
@@ -58,6 +63,11 @@ def __parse_one_pipe_file(entry):
 
 
 def __parse_pipe_files(pipe_files_item):
+    """
+    Parses pipes image
+    :param pipe_files_item: item, loaded from pipes image
+    :return: dictionary of file ids pointing to crdata.PipeFile structure
+    """
     return {entry["id"]: __parse_one_pipe_file(entry) for entry in pipe_files_item["entries"]}
 
 
@@ -114,6 +124,18 @@ def __parse_pagemap(pagemap_item):
     )
 
 
+def __parse_shared_anon_pagemaps(source_path, image_type):
+    """
+    Parses all image files with names `pagemap-shmem-{shmid}.{image_type}'
+    :param source_path: root directory of dumped images
+    :param image_type: type of image item (json or img)
+    :return:
+    """
+    shmem_pagemaps = [os.path.splitext(os.path.basename(s))[0]
+                      for s in glob.glob(os.path.join(source_path, "pagemap-shmem-*.{}".format(image_type)))]
+    return shmem_pagemaps
+
+
 def __parse_one_process(process_item, source_path, image_type):
     pid = process_item["pid"]
     ppid = process_item["ppid"]
@@ -154,7 +176,9 @@ def __parse_one_process(process_item, source_path, image_type):
 
 
 def __load_processes(source_path, image_type):
-    # reading every process specific data
+    """
+    :return: list of parsed processes
+    """
     processes_item = __load_item(source_path, "pstree", image_type)
     return [__parse_one_process(e, source_path, image_type)
             for e in processes_item["entries"]]
