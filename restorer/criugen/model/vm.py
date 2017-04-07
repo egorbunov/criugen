@@ -1,9 +1,9 @@
 from model.resource import ResourceProvider
 
 
-class PrivateAnonVmas(ResourceProvider):
+class PrivateVmas(ResourceProvider):
     """
-    This resource provider correctly collects private anonymous areas and determines,
+    This resource provider correctly collects private areas and determines,
     which of them are shared between multiple processes
     """
 
@@ -12,6 +12,7 @@ class PrivateAnonVmas(ResourceProvider):
         return True
 
     def get_dependencies(self, resource):
+        # TODO implement
         pass
 
     @property
@@ -19,6 +20,7 @@ class PrivateAnonVmas(ResourceProvider):
         return True
 
     def get_resource_holders(self, resource):
+        # TODO implement
         pass
 
     @property
@@ -26,14 +28,13 @@ class PrivateAnonVmas(ResourceProvider):
         return False
 
     def get_all_resources(self):
+        # TODO implement
         pass
 
 
-class BackedByFilesVmas(ResourceProvider):
+class SharedVmas(ResourceProvider):
     """
-    Resource provider responsible for virtual memory areas, which are backed
-    by file in some way. We refer Shared and Anonymous mappings as those class
-    VMAs too, because linux actually creates files for serving them.
+    Resource provider responsible for virtual memory areas, which are shared
     """
 
     @property
@@ -41,6 +42,7 @@ class BackedByFilesVmas(ResourceProvider):
         return False
 
     def get_dependencies(self, resource):
+        # TODO implement
         pass
 
     @property
@@ -48,6 +50,7 @@ class BackedByFilesVmas(ResourceProvider):
         return True
 
     def get_resource_holders(self, resource):
+        # TODO implement
         pass
 
     @property
@@ -55,4 +58,5 @@ class BackedByFilesVmas(ResourceProvider):
         return False
 
     def get_all_resources(self):
+        # TODO implement
         pass

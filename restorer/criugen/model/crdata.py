@@ -18,10 +18,8 @@ Process = collections.namedtuple('Process', [
     id is just an identifier of VMA, ids are per process, not per application
     """
     'vmas',
-
     'ids',  # various ids for process like it's namespace ids
     'page_map'  # map of pages to fill in target process VM
-
 ])
 
 """
