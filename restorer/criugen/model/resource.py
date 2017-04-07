@@ -71,12 +71,12 @@ class ResourceProvider:
         """
         This method, practically, returns list of processes paired with handles,
         which are used to access this resource. For example in case of regular files:
-        resource is a file object and handle is file descriptor, so (Process, FileDescriptor)
+        resource is a file object and handle is file descriptor, so (Process, [FileDescriptor])
         pair is returned for each process, which is holding specified resource
 
         :param resource: some resource object
         :type resource: object
-        :return: list of pairs (Process, Resource Handle)
+        :return: list of pairs (Process, list[FileDescriptor])
         :rtype: list
         """
 
@@ -85,7 +85,19 @@ class ResourceProvider:
         """
         Returns list of resources, which are needed for
         specified resource creation.
-        This list does not include processes, which hold resource (TODO: maybe that is not cool design)
+        
+        This list does should not include Processes as resource-dependencies. On one hand that is
+        not great design, but on the other hand resource is often not something, that needs a particular
+        process to create it. Resource may be shared among number of processes, so no one of this processes
+        are really needed for this resource to exist. Process cat initiate resource creation, so resource
+        will be created in the kernel, after that process will have a kind of a link to the resource,
+        so this link is a thing, that is attached tightly to the process, but resource itself is a bit
+        farther.
+        
+        Due to thoughts above I have separated resource-dependencies and processes. Processes are handled
+        by `get_resource_holders()` method, so they act as a resource holders. But the Process is a resource
+        too. This is the only resource, which can hold another resource. Also it does not depend on other resource.
+        
         :param resource: resource, for that user want to get list of dependencies
         :type resource: object
         :return: list of resources
