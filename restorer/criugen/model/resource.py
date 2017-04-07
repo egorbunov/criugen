@@ -4,6 +4,28 @@ from abc import abstractmethod, ABCMeta, abstractproperty
 class ResourceProvider:
     """
     Abstract class for single type resource manager.
+
+    The idea behind this abstraction:
+
+    1. Application may contain many processes. All this processes in general share kernel
+       resources. There are many kinds of resources. Command generation algorithm uses
+       information about this resources to properly determine which command to put next.
+       This class is a provider for exactly one kind of resource.
+    2. Resources may be shared in different ways: sent via UNIX socket as file descriptor,
+       inherited through forking and ...?
+    3. Each resource creation may depend on other resources: backed by file virtual memory area 
+       depends on a file; child process creation depends on it's parent process
+    4. Process not just holds a resource, but it has some kind of userspace handle, to interact
+       with it. Examples: 
+               | Resource            | Handle                  |
+               | ------------------- | ----------------------- |
+               | Regular File        | file descriptor         |
+               | Socket              | file descriptor         |
+               | Virtual Memory Area | (start address, length) |
+               | Process             | process id              |
+               | Thread              | thread id               |
+        For now, handle is some kind of identifier or whatever, which lets us to "talk" to resource
+        somehow
     """
     def __init__(self):
         pass
@@ -41,21 +63,21 @@ class ResourceProvider:
         """
         :return: list of resources, which are available from current
                  resource manager
-        :rtype: list
+        :rtype: list 
         """
 
     @abstractmethod
     def get_resource_holders(self, resource):
         """
-        This method, practically, returns list of processes, which are
-        holding specified resource somehow; for example if resource is
-        a regular file then list of processes, who has this file opened
+        This method, practically, returns list of processes paired with handles,
+        which are used to access this resource. For example in case of regular files:
+        resource is a file object and handle is file descriptor, so (Process, FileDescriptor)
+        pair is returned for each process, which is holding specified resource
 
-        :param resource: resource, which is available (managed, if you want) by
-               this resource manager
+        :param resource: some resource object
         :type resource: object
-        :return: iterable of processes, which are resource holders for given resource
-        :rtype: list[crdata.Process]
+        :return: list of pairs (Process, Resource Handle)
+        :rtype: list
         """
 
     @abstractmethod
@@ -67,5 +89,5 @@ class ResourceProvider:
         :param resource: resource, for that user want to get list of dependencies
         :type resource: object
         :return: list of resources
-        :rtype: list[crdata.Process]
+        :rtype: list
         """
