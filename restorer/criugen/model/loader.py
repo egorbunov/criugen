@@ -6,6 +6,7 @@ import pycriu
 
 import crconstants
 import crdata
+from resource_handles import *
 
 
 def __load_img(img_path):
@@ -155,10 +156,11 @@ def __parse_one_process(process_item, source_path, image_type):
     ids_item = __load_item(source_path, "ids-{}".format(pid), image_type)
     ids = ids_item["entries"][0]
 
+    # building file descriptor table
     p_fdt = {}
     fd_info_item = __load_item(source_path, "fdinfo-{}".format(ids["files_id"]), image_type)
     if fd_info_item is not None:
-        p_fdt = {e["fd"]: e["id"] for e in fd_info_item["entries"]}
+        p_fdt = {FileDescriptor(e["fd"]): e["id"] for e in fd_info_item["entries"]}
 
     mm_item = __load_item(source_path, "mm-{}".format(pid), image_type)
     p_vminfo, p_vmas = __parse_mm(mm_item)
