@@ -2,7 +2,7 @@ from model.resource import ResourceProvider
 import crdata
 
 
-class FilesProvider(ResourceProvider):
+class RegularFilesProvider(ResourceProvider):
     """
     Class, which is used as resource provider for any resource with id.
     It was intended to be provider for regular files and other stuff like pipes...
@@ -16,7 +16,7 @@ class FilesProvider(ResourceProvider):
                representing set of files, used somehow by processes
         :type files: list
         """
-        super(FilesProvider, self).__init__()
+        super(RegularFilesProvider, self).__init__()
         self.processes = processes
         self.reg_files = files
 
@@ -57,8 +57,13 @@ class FilesProvider(ResourceProvider):
             raise TypeError("Resource must be Regular File")
 
         holding_processes = self.__file_ids_to_processes[resource.id]
-        # returning list of pairs: (process, list[FileDescriptor])
-        return [(p, self.__proc_files[p][resource.id]) for p in holding_processes]
+        return holding_processes
+
+    def get_resource_handles(self, resource, process):
+        if type(resource) is not crdata.RegFile:
+            raise TypeError("Resource must be Regular File")
+        # list of file descriptors
+        return self.__proc_files[process][resource.id]
 
     def get_dependencies(self, resource):
         """

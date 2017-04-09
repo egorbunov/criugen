@@ -25,6 +25,14 @@ class ProcessTree(ResourceProvider):
     def get_all_resources(self):
         return self.processes
 
+    def get_resource_handles(self, resource, process):
+        if type(resource) is not crdata.Process:
+            raise TypeError("Resource is not a Process!")
+        if self.proc_parent(resource) != process:
+            return []
+        # parent process distinguish it's child with help of child's pid
+        return [resource.pid]
+
     def get_resource_holders(self, resource):
         if type(resource) is not crdata.Process:
             raise TypeError("Resource is not a Process!")
@@ -33,10 +41,7 @@ class ProcessTree(ResourceProvider):
         # that that is okay from perspective, that parent process have all it's
         # rights to decide, when to create a child process. In this way parent
         # process may be considered as something, that holds it's children
-        parent_process = self.proc_parent(resource)
-        # parent process distinguish it's child with help of child's pid
-        process_pid = resource.pid
-        return [self.proc_parent(resource), [process_pid]]
+        return [self.proc_parent(resource)]
 
     def __init__(self, processes):
         super(ProcessTree, self).__init__()

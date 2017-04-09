@@ -23,6 +23,10 @@ class PrivateVmas(ResourceProvider):
         # TODO implement
         pass
 
+    def get_resource_handles(self, resource, process):
+        # TODO implement
+        pass
+
     @property
     def is_sendable(self):
         return False
@@ -50,6 +54,10 @@ class SharedVmas(ResourceProvider):
         return True
 
     def get_resource_holders(self, resource):
+        # TODO implement
+        pass
+
+    def get_resource_handles(self, resource, process):
         # TODO implement
         pass
 

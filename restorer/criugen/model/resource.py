@@ -69,8 +69,8 @@ class ResourceProvider:
     @abstractmethod
     def get_resource_holders(self, resource):
         """
-        This method, practically, returns list of processes paired with handles,
-        which are used to access this resource. For example in case of regular files:
+        This method, practically, returns list of processes paired.
+         For example in case of regular files:
         resource is a file object and handle is file descriptor, so (Process, [FileDescriptor])
         pair is returned for each process, which is holding specified resource
 
@@ -78,6 +78,17 @@ class ResourceProvider:
         :type resource: object
         :return: list of pairs (Process, list[FileDescriptor])
         :rtype: list
+        """
+
+    @abstractmethod
+    def get_resource_handles(self, resource, process):
+        """
+        Returns list of handles, which are used to access given resource in a specified process.
+        
+        :param resource: resource to get handles for
+        :param process: process object, within who this resource is handled 
+        :return: list of handles
+        :rtype: list[object]
         """
 
     @abstractmethod
