@@ -7,6 +7,27 @@ import pycriu
 import crconstants
 import crdata
 from resource_handles import *
+import resource
+
+
+def wrap_returned_resource(resource_gen_fun):
+    """ Decorates given function to produce resource.ResourceWrapper 
+    
+    Given function is supposed to return some process resource
+    """
+    if hasattr(wrap_returned_resource, 'next_resource_id'):
+        wrap_returned_resource.next_resource_id += 1
+    else:
+        wrap_returned_resource.next_resource_id = 0
+
+    def wrapper(*args, **kwargs):
+        """
+        :return: wrapped resource
+        :rtype: resource.ResourceWrapper
+        """
+        return resource.ResourceWrapper(resource_id=wrap_returned_resource.next_resource_id,
+                                        resource=resource_gen_fun(*args, **kwargs))
+    return wrapper
 
 
 def __load_img(img_path):
@@ -38,6 +59,7 @@ def __load_item(source_path, item_name, item_type):
     return loaders[item_type](img_path)
 
 
+@wrap_returned_resource
 def __parse_one_reg_file(entry):
     size = None if "size" not in entry else entry["size"]
     flags = [s.strip() for s in entry["flags"].split("|")]
@@ -53,11 +75,12 @@ def __parse_reg_files(reg_files_item):
     """
     Parses reg-files image
     :param reg_files_item: item, loaded from reg-files image
-    :return: dictionary of file ids pointing to crdata.RegFile structure
+    :return: list of crdata.RegFile structures
     """
-    return {entry["id"]: __parse_one_reg_file(entry) for entry in reg_files_item["entries"]}
+    return [__parse_one_reg_file(entry) for entry in reg_files_item["entries"]]
 
 
+@wrap_returned_resource
 def __parse_one_pipe_file(entry):
     flags = [s.strip() for s in entry["flags"].split("|")]
     return crdata.PipeFile(id=entry["pipe_id"], flags=flags)
@@ -67,11 +90,12 @@ def __parse_pipe_files(pipe_files_item):
     """
     Parses pipes image
     :param pipe_files_item: item, loaded from pipes image
-    :return: dictionary of file ids pointing to crdata.PipeFile structure
+    :return: list of crdata.PipeFile structures
     """
-    return {entry["id"]: __parse_one_pipe_file(entry) for entry in pipe_files_item["entries"]}
+    return [__parse_one_pipe_file(entry) for entry in pipe_files_item["entries"]]
 
 
+@wrap_returned_resource
 def __parse_one_vma(e):
     return crdata.VmArea(
         start=e['start'],
@@ -86,6 +110,7 @@ def __parse_one_vma(e):
     )
 
 
+@wrap_returned_resource
 def __parse_vm_info(e):
     return crdata.VmInfo(
         arg_start=e['mm_arg_start'],
@@ -115,6 +140,7 @@ def __parse_mm(mm_item):
     return vm_info, vmas
 
 
+@wrap_returned_resource
 def __parse_pagemap(pagemap_item):
     """
     :param pagemap_item: item loaded from pagemap-{pid} image or from pagemap-shmem-{shmid} image
@@ -137,6 +163,7 @@ def __parse_shared_anon_pagemaps(source_path, image_type):
     return shmem_pagemaps
 
 
+@wrap_returned_resource
 def __parse_one_process(process_item, source_path, image_type):
     pid = process_item["pid"]
     ppid = process_item["ppid"]
@@ -204,12 +231,12 @@ def load(source_path, image_type):
         item = __load_item(source_path, "pipes", image_type)
         pipe_files = __parse_pipe_files(item)
 
-    files = dict(reg_files.items() + pipe_files.items())
-
     # reading every process specific data
-    # pstree_item = __load_item(source_path, "pstree", image_type)
     processes = __load_processes(source_path, image_type)
-    return crdata.App(processes, files)
+    return crdata.Application(processes=processes,
+                              regular_files=reg_files,
+                              pipe_files=pipe_files,
+                              shared_anon_mem={})
 
 
 def load_from_jsons(source_path):

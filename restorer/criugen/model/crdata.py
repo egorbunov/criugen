@@ -1,9 +1,20 @@
 import collections
 
+
+def resource_tuple(name, properties):
+    """ Creates namedtuple with `resource_id` attribute and other fields specified
+    :param name: name of the resource
+    :type name: str
+    :param properties: resource attributes
+    :type properties: list[str]
+    :return: named tuple
+    """
+    return collections.namedtuple(name, ['resource_id'] + properties)
+
 """
 Process data structure
 """
-Process = collections.namedtuple('Process', [
+Process = resource_tuple('Process', [
     'pid',  # process id
     'ppid',  # process parent id
     'pgid',  # process group id
@@ -23,9 +34,9 @@ Process = collections.namedtuple('Process', [
 ])
 
 """
-Regular file
+Regular file    
 """
-RegFile = collections.namedtuple('RegFile', [
+RegFile = resource_tuple('RegFile', [
     'id',
     'path',
     'size',
@@ -37,7 +48,7 @@ RegFile = collections.namedtuple('RegFile', [
 """
 Structure, which describes one pipe
 """
-PipeFile = collections.namedtuple('PipeFile', [
+PipeFile = resource_tuple('PipeFile', [
     'id',
     'flags'
 ])
@@ -45,7 +56,7 @@ PipeFile = collections.namedtuple('PipeFile', [
 """
 Virtual process memory global map
 """
-VmInfo = collections.namedtuple('VmInfo', [
+VmInfo = resource_tuple('VmInfo', [
     'arg_start',
     'arg_end',
     'brk',
@@ -65,7 +76,7 @@ VmInfo = collections.namedtuple('VmInfo', [
 """
 Virtual memory area
 """
-VmArea = collections.namedtuple('VmArea', [
+VmArea = resource_tuple('VmArea', [
     'start',
     'end',
     'pgoff',
@@ -80,7 +91,7 @@ VmArea = collections.namedtuple('VmArea', [
 """
 Map of pages to fill in a target process address space
 """
-PageMap = collections.namedtuple('PageMap', [
+PageMap = resource_tuple('PageMap', [
     'pages_id',  # id to identify file, where raw pages are stored
     'maps'  # list of entries { "vaddr": ..., "nr_pages": ... }
 ])
@@ -90,12 +101,12 @@ Shared Anonymous Memory record, it is described here only by it's id and pagemap
 It's relation to any of VMA structs is not handled here explicitly (only implicitly,
 with shmid)
 """
-SharedAnonMem = collections.namedtuple('SharedAnonMem', [
+SharedAnonMem = resource_tuple('SharedAnonMem', [
     'id',  # id of shared memory
     'pagemap'  # page map for this shared anon memory, that is PageMap instance
 ])
 
-AppTuple = collections.namedtuple('App', [
+Application = collections.namedtuple('App', [
     'processes',
     'regular_files',
     'pipe_files',
@@ -103,71 +114,71 @@ AppTuple = collections.namedtuple('App', [
 ])
 
 
-class App:
-    def __init__(self,
-                 processes,
-                 files,
-                 shared_anon_mems):
-        """
-        :param processes: list of processes
-        :param files:  map from file id to file structure
-        :param shared_anon_mems map from shmid to SharedAnonMem structure
-        """
-        self.processes = processes
-        self.files = files
-        self.__proc_map = {p.pid: p for p in processes}
-        self.__root = next(p for p in processes if p.ppid == 0)
-        self.__fake_root = Process(pid=0, ppid=-1, pgid=-1, sid=-1,
-                                   state=-1, threads_ids=[], fdt={},
-                                   ids={}, vmas=[], vm_info={})
-        self.__all_procs = processes + [self.__fake_root]
-
-        def children_construct(acc, p):
-            if p.ppid not in acc:
-                acc[p.ppid] = []
-            acc[p.ppid].append(p)
-            if p.pid not in acc:
-                acc[p.pid] = []
-            return acc
-
-        self.__proc_children = reduce(children_construct, self.__all_procs, {})
-
-        def proc_files_construct(p):
-            files_map = {}
-            for fd, fid in p.fdt.iteritems():
-                if fid not in files_map:
-                    files_map[fid] = set()
-                files_map[fid].add(fd)
-            return files_map
-
-        self.__proc_files = {p.pid: proc_files_construct(p) for p in self.__all_procs}
-        self.__shared_anon_mem_records = shared_anon_mems
-
-    def root_process(self):
-        return self.__root
-
-    def process_parent(self, proc):
-        """
-        :param proc: instance of `crdata.Process`
-        :return: process parent as instance of `crdata.Process`
-        """
-        if proc == self.root_process():
-            return self.__fake_root
-        return self.__proc_map[proc.ppid]
-
-    def file_by_id(self, fid):
-        return self.files[fid]
-
-    def process_files(self, proc):
-        """
-        :param proc: instance of `crdata.Process`
-        :return: map from file structure to set of file descriptors
-        """
-        return self.__proc_files[proc.pid]
-
-    def process_children(self, proc):
-        """
-        :param proc: instance of `crdata.Process`
-        :return: list of process child processes
-        """
-        return self.__proc_children[proc.pid]
+# class App:
+#     def __init__(self,
+#                  processes,
+#                  files,
+#                  shared_anon_mems):
+#         """
+#         :param processes: list of processes
+#         :param files:  map from file id to file structure
+#         :param shared_anon_mems map from shmid to SharedAnonMem structure
+#         """
+#         self.processes = processes
+#         self.files = files
+#         self.__proc_map = {p.pid: p for p in processes}
+#         self.__root = next(p for p in processes if p.ppid == 0)
+#         self.__fake_root = Process(pid=0, ppid=-1, pgid=-1, sid=-1,
+#                                    state=-1, threads_ids=[], fdt={},
+#                                    ids={}, vmas=[], vm_info={})
+#         self.__all_procs = processes + [self.__fake_root]
+#
+#         def children_construct(acc, p):
+#             if p.ppid not in acc:
+#                 acc[p.ppid] = []
+#             acc[p.ppid].append(p)
+#             if p.pid not in acc:
+#                 acc[p.pid] = []
+#             return acc
+#
+#         self.__proc_children = reduce(children_construct, self.__all_procs, {})
+#
+#         def proc_files_construct(p):
+#             files_map = {}
+#             for fd, fid in p.fdt.iteritems():
+#                 if fid not in files_map:
+#                     files_map[fid] = set()
+#                 files_map[fid].add(fd)
+#             return files_map
+#
+#         self.__proc_files = {p.pid: proc_files_construct(p) for p in self.__all_procs}
+#         self.__shared_anon_mem_records = shared_anon_mems
+#
+#     def root_process(self):
+#         return self.__root
+#
+#     def process_parent(self, proc):
+#         """
+#         :param proc: instance of `crdata.Process`
+#         :return: process parent as instance of `crdata.Process`
+#         """
+#         if proc == self.root_process():
+#             return self.__fake_root
+#         return self.__proc_map[proc.ppid]
+#
+#     def file_by_id(self, fid):
+#         return self.files[fid]
+#
+#     def process_files(self, proc):
+#         """
+#         :param proc: instance of `crdata.Process`
+#         :return: map from file structure to set of file descriptors
+#         """
+#         return self.__proc_files[proc.pid]
+#
+#     def process_children(self, proc):
+#         """
+#         :param proc: instance of `crdata.Process`
+#         :return: list of process child processes
+#         """
+#         return self.__proc_children[proc.pid]

@@ -1,7 +1,15 @@
 from abc import abstractmethod, ABCMeta, abstractproperty
 
 
-class ResourceProvider:
+class ResourceWrapper(object):
+    __slots__ = ['resource_id', 'r'],
+
+    def __init__(self, resource_id, resource):
+        self.resource_id = resource_id
+        self.r = resource
+
+
+class ResourceProvider(object):
     """
     Abstract class for single type resource manager.
 
@@ -27,6 +35,7 @@ class ResourceProvider:
         For now, handle is some kind of identifier or whatever, which lets us to "talk" to resource
         somehow
     """
+
     def __init__(self):
         pass
 
