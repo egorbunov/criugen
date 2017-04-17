@@ -2,14 +2,14 @@ import collections
 
 
 def resource_tuple(name, properties):
-    """ Creates namedtuple with `resource_id` attribute and other fields specified
+    """ Creates namedtuple with given name and props
     :param name: name of the resource
     :type name: str
     :param properties: resource attributes
     :type properties: list[str]
     :return: named tuple
     """
-    return collections.namedtuple(name, ['resource_id'] + properties)
+    return collections.namedtuple(name, properties)
 
 """
 Process data structure
@@ -24,10 +24,8 @@ Process = resource_tuple('Process', [
     'fdt',  # file descriptor table: map (dict) from file descriptor to file id
     'vm_info',  # global vm info (start and end addresses of segments and other stuff)
 
-    """
-    array of pairs (id, VmArea structure), describing mappings in process vm
-    id is just an identifier of VMA, ids are per process, not per application
-    """
+    # array of pairs (id, VmArea structure), describing mappings in process vm
+    # id is just an identifier of VMA, ids are per process, not per application
     'vmas',
     'ids',  # various ids for process like it's namespace ids
     'page_map'  # map of pages to fill in target process VM

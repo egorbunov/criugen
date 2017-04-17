@@ -15,18 +15,18 @@ def wrap_returned_resource(resource_gen_fun):
     
     Given function is supposed to return some process resource
     """
-    if hasattr(wrap_returned_resource, 'next_resource_id'):
-        wrap_returned_resource.next_resource_id += 1
-    else:
-        wrap_returned_resource.next_resource_id = 0
-
     def wrapper(*args, **kwargs):
         """
         :return: wrapped resource
         :rtype: resource.ResourceWrapper
         """
-        return resource.ResourceWrapper(resource_id=wrap_returned_resource.next_resource_id,
-                                        resource=resource_gen_fun(*args, **kwargs))
+        if hasattr(wrap_returned_resource, 'next_resource_id'):
+            wrap_returned_resource.next_resource_id += 1
+        else:
+            wrap_returned_resource.next_resource_id = 0
+
+        return resource.ResourceWrapper(resource_id=int(wrap_returned_resource.next_resource_id),
+                                        r=resource_gen_fun(*args, **kwargs))
     return wrapper
 
 
@@ -138,7 +138,7 @@ def __parse_one_process(process_item, source_path, image_type):
         # dead task (as I got it's a zombie) is empty one...
         return crdata.Process(pid=pid, ppid=ppid, pgid=pgid,
                               sid=sid, state=p_state, threads_ids=threads,
-                              fdt={}, ids={}, vmas=[], vm_info={})
+                              fdt={}, ids={}, vmas=[], vm_info={}, page_map={})
 
     ids_item = __load_item(source_path, "ids-{}".format(pid), image_type)
     ids = ids_item["entries"][0]
