@@ -1,5 +1,6 @@
 import crdata
 from resource import ResourceProvider
+from loader import next_resource_id
 
 
 class ProcessTree(ResourceProvider):
@@ -46,7 +47,8 @@ class ProcessTree(ResourceProvider):
     def __init__(self, processes):
         super(ProcessTree, self).__init__()
         self.processes = processes
-        self.__fake_root = crdata.Process(pid=0, ppid=-1, pgid=-1, sid=-1,
+        self.__fake_root = crdata.Process(resource_id=next_resource_id(),
+                                          pid=0, ppid=-1, pgid=-1, sid=-1,
                                           state=-1, threads_ids=[], fdt={},
                                           ids={}, vmas=[], vm_info={})
         self.__all_procs = processes + [self.__fake_root]
@@ -73,14 +75,15 @@ class ProcessTree(ResourceProvider):
         """
         :param proc: process instance
         :return: list of children processes for given process,
-                 list of crdata.Process
+        :rtype: list[crdata.Process]
         """
         return self.__proc_children(proc)
 
     def proc_parent(self, proc):
         """
         :param proc: instance of `crdata.Process`
-        :return: process parent as instance of `crdata.Process`
+        :return: process parent
+        :rtype: crdata.Process
         """
         if proc == self.root_process():
             return self.__fake_root
@@ -89,6 +92,7 @@ class ProcessTree(ResourceProvider):
     def proc_by_pid(self, pid):
         """
         :param pid: process id
-        :return: process struct instance
+        :return: process structure instance
+        :rtype: crdata.Process
         """
         return self.__proc_map[pid]

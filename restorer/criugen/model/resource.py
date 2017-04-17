@@ -1,4 +1,5 @@
 from abc import abstractmethod, ABCMeta, abstractproperty
+import crdata
 
 
 class ResourceProvider(object):
@@ -64,21 +65,18 @@ class ResourceProvider(object):
         """
         :return: list of resources, which are available from current
                  resource manager
-        :rtype: list 
+        :rtype: list[crdata.Resource]
         """
 
     @abstractmethod
     def get_resource_holders(self, resource):
         """
-        This method, practically, returns list of processes paired.
-         For example in case of regular files:
-        resource is a file object and handle is file descriptor, so (Process, [FileDescriptor])
-        pair is returned for each process, which is holding specified resource
+        This method, practically, returns list of processes
 
         :param resource: some resource object
         :type resource: object
-        :return: list of pairs (Process, list[FileDescriptor])
-        :rtype: list
+        :return: list processes holding given resource
+        :rtype: list[crdata.Process]
         """
 
     @abstractmethod
@@ -113,5 +111,5 @@ class ResourceProvider(object):
         :param resource: resource, for that user want to get list of dependencies
         :type resource: object
         :return: list of resources
-        :rtype: list
+        :rtype: list[crdata.Resource]
         """

@@ -13,7 +13,7 @@ from resource_handles import *
 __gen_resource_id = itertools.count()
 
 
-def __next_resource_id():
+def next_resource_id():
     """ generates new resource id
     :rtype: int
     """
@@ -52,7 +52,7 @@ def _load_item(source_path, item_name, item_type):
 def _parse_one_reg_file(entry):
     size = None if "size" not in entry else entry["size"]
     flags = [s.strip() for s in entry["flags"].split("|")]
-    return crdata.RegFile(resource_id=__next_resource_id(),
+    return crdata.RegFile(resource_id=next_resource_id(),
                           id=entry["id"],
                           path=entry["name"],
                           size=size,
@@ -64,7 +64,7 @@ def _parse_one_reg_file(entry):
 def _parse_one_pipe_file(entry):
     flags = [s.strip() for s in entry["flags"].split("|")]
     return crdata.PipeFile(
-        resource_id=__next_resource_id(),
+        resource_id=next_resource_id(),
         id=entry["pipe_id"],
         flags=flags
     )
@@ -72,7 +72,7 @@ def _parse_one_pipe_file(entry):
 
 def _parse_one_vma(e):
     return crdata.VmArea(
-        resource_id=__next_resource_id(),
+        resource_id=next_resource_id(),
         start=e['start'],
         end=e['end'],
         pgoff=e['pgoff'],
@@ -87,7 +87,7 @@ def _parse_one_vma(e):
 
 def _parse_vm_info(e):
     return crdata.VmInfo(
-        resource_id=__next_resource_id(),
+        resource_id=next_resource_id(),
         arg_start=e['mm_arg_start'],
         arg_end=e['mm_arg_end'],
         brk=e['mm_brk'],
@@ -110,7 +110,7 @@ def _parse_pagemap(pagemap_item):
     :param pagemap_item: item loaded from pagemap-{pid} image or from pagemap-shmem-{shmid} image
     """
     return crdata.PageMap(
-        resource_id=__next_resource_id(),
+        resource_id=next_resource_id(),
         pages_id=pagemap_item['entries'][0]['pages_id'],
         maps=pagemap_item['entries'][1:]
     )
@@ -128,7 +128,7 @@ def _parse_one_process(process_item, source_path, image_type):
     p_state = core_item["entries"][0]["tc"]["task_state"]
     if p_state == crconstants.TASK_STATE_DEAD:
         # dead task (as I got it's a zombie) is empty one...
-        return crdata.Process(resource_id=__next_resource_id(),
+        return crdata.Process(resource_id=next_resource_id(),
                               pid=pid, ppid=ppid, pgid=pgid,
                               sid=sid, state=p_state, threads_ids=threads,
                               fdt={}, ids={}, vmas=[], vm_info={}, page_map={})
@@ -151,7 +151,7 @@ def _parse_one_process(process_item, source_path, image_type):
     sigacts_item = _load_item(source_path, "sigacts-{}".format(pid), image_type)
     fs_item = _load_item(source_path, "fs-{}".format(pid), image_type)
 
-    return crdata.Process(resource_id=__next_resource_id(),
+    return crdata.Process(resource_id=next_resource_id(),
                           pid=pid, ppid=ppid, pgid=pgid,
                           sid=sid, threads_ids=threads,
                           state=p_state, fdt=p_fdt, ids={}, vmas=p_vmas,
