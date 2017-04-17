@@ -71,28 +71,10 @@ def __parse_one_reg_file(entry):
                           mode=entry["mode"])
 
 
-def __parse_reg_files(reg_files_item):
-    """
-    Parses reg-files image
-    :param reg_files_item: item, loaded from reg-files image
-    :return: list of crdata.RegFile structures
-    """
-    return [__parse_one_reg_file(entry) for entry in reg_files_item["entries"]]
-
-
 @wrap_returned_resource
 def __parse_one_pipe_file(entry):
     flags = [s.strip() for s in entry["flags"].split("|")]
     return crdata.PipeFile(id=entry["pipe_id"], flags=flags)
-
-
-def __parse_pipe_files(pipe_files_item):
-    """
-    Parses pipes image
-    :param pipe_files_item: item, loaded from pipes image
-    :return: list of crdata.PipeFile structures
-    """
-    return [__parse_one_pipe_file(entry) for entry in pipe_files_item["entries"]]
 
 
 @wrap_returned_resource
@@ -130,16 +112,6 @@ def __parse_vm_info(e):
     )
 
 
-def __parse_mm(mm_item):
-    """
-    :param mm_item: item loaded from mm-{pid} image
-    :return: (VmInfo, array of VmArea)
-    """
-    vm_info = __parse_vm_info(mm_item['entries'][0])
-    vmas = [(idx + 1, __parse_one_vma(e)) for idx, e in enumerate(mm_item['entries'][0]['vmas'])]
-    return vm_info, vmas
-
-
 @wrap_returned_resource
 def __parse_pagemap(pagemap_item):
     """
@@ -149,18 +121,6 @@ def __parse_pagemap(pagemap_item):
         pages_id=pagemap_item['entries'][0]['pages_id'],
         maps=pagemap_item['entries'][1:]
     )
-
-
-def __parse_shared_anon_pagemaps(source_path, image_type):
-    """
-    Parses all image files with names `pagemap-shmem-{shmid}.{image_type}'
-    :param source_path: root directory of dumped images
-    :param image_type: type of image item (json or img)
-    :return:
-    """
-    shmem_pagemaps = [os.path.splitext(os.path.basename(s))[0]
-                      for s in glob.glob(os.path.join(source_path, "pagemap-shmem-*.{}".format(image_type)))]
-    return shmem_pagemaps
 
 
 @wrap_returned_resource
@@ -202,6 +162,46 @@ def __parse_one_process(process_item, source_path, image_type):
                           sid=sid, threads_ids=threads,
                           state=p_state, fdt=p_fdt, ids={}, vmas=p_vmas,
                           vm_info=p_vminfo, page_map=pagemap)
+
+
+def __parse_reg_files(reg_files_item):
+    """
+    Parses reg-files image
+    :param reg_files_item: item, loaded from reg-files image
+    :return: list of crdata.RegFile structures
+    """
+    return [__parse_one_reg_file(entry) for entry in reg_files_item["entries"]]
+
+
+def __parse_pipe_files(pipe_files_item):
+    """
+    Parses pipes image
+    :param pipe_files_item: item, loaded from pipes image
+    :return: list of crdata.PipeFile structures
+    """
+    return [__parse_one_pipe_file(entry) for entry in pipe_files_item["entries"]]
+
+
+def __parse_mm(mm_item):
+    """
+    :param mm_item: item loaded from mm-{pid} image
+    :return: (VmInfo, array of VmArea)
+    """
+    vm_info = __parse_vm_info(mm_item['entries'][0])
+    vmas = [(idx + 1, __parse_one_vma(e)) for idx, e in enumerate(mm_item['entries'][0]['vmas'])]
+    return vm_info, vmas
+
+
+def __parse_shared_anon_pagemaps(source_path, image_type):
+    """
+    Parses all image files with names `pagemap-shmem-{shmid}.{image_type}'
+    :param source_path: root directory of dumped images
+    :param image_type: type of image item (json or img)
+    :return:
+    """
+    shmem_pagemaps = [os.path.splitext(os.path.basename(s))[0]
+                      for s in glob.glob(os.path.join(source_path, "pagemap-shmem-*.{}".format(image_type)))]
+    return shmem_pagemaps
 
 
 def __load_processes(source_path, image_type):
