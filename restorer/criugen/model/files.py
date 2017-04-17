@@ -12,8 +12,7 @@ class RegularFilesProvider(ResourceProvider):
         """
         :param processes: list of processes (to be restored)
         :type processes: list
-        :param files: list of objects with id property,
-               representing set of files, used somehow by processes
+        :param files: list of file-resources (file wrapped inside ResourceWrapper)
         :type files: list
         """
         super(RegularFilesProvider, self).__init__()
@@ -21,7 +20,7 @@ class RegularFilesProvider(ResourceProvider):
         self.reg_files = files
 
         self.__file_ids_to_processes = {f.id: filter(lambda p: f.id in p.fdt.values(), processes)
-                                        for f in files}
+                                        for f in self.reg_files}
 
         def proc_files_construct(p):
             """ Constructs map from file id to set of file descriptors 
