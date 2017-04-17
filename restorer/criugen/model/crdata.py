@@ -1,115 +1,112 @@
-import collections
+from utils.dataclass import DataClass
 
 
-def resource_tuple(name, properties):
-    """ Creates namedtuple with given name and props
-    :param name: name of the resource
-    :type name: str
-    :param properties: resource attributes
-    :type properties: list[str]
-    :return: named tuple
+class Resource(DataClass):
     """
-    return collections.namedtuple(name, properties)
+    Base resource class
+    """
+    resource_id = """Id of the resource"""
 
-"""
-Process data structure
-"""
-Process = resource_tuple('Process', [
-    'pid',  # process id
-    'ppid',  # process parent id
-    'pgid',  # process group id
-    'sid',  # process session id
-    'state',  # process state
-    'threads_ids',  # set of thread ids
-    'fdt',  # file descriptor table: map (dict) from file descriptor to file id
-    'vm_info',  # global vm info (start and end addresses of segments and other stuff)
 
-    # array of pairs (id, VmArea structure), describing mappings in process vm
-    # id is just an identifier of VMA, ids are per process, not per application
-    'vmas',
-    'ids',  # various ids for process like it's namespace ids
-    'page_map'  # map of pages to fill in target process VM
-])
+class Process(Resource):
+    """
+    Process data structure
+    """
+    pid = """process id"""
+    ppid = """process parent pid"""
+    pgid = """process group id"""
+    sid = """process session id"""
+    state = """process state"""
+    threads_ids = """set of thread ids"""
+    fdt = """file descriptor table: map (dict) from file descriptor to file id"""
+    vm_info = """global vm info (start and end addresses of segments and other stuff)"""
+    vmas = """array of pairs (id, VmArea structure), describing mappings in process vm
+              id is just an identifier of VMA, ids are per process, not per application"""
+    ids = """various ids for process like it's namespace ids"""
+    page_map = """map of pages to fill in target process VM"""
 
-"""
-Regular file    
-"""
-RegFile = resource_tuple('RegFile', [
-    'id',
-    'path',
-    'size',
-    'pos',
-    'flags',
-    'mode'
-])
 
-"""
-Structure, which describes one pipe
-"""
-PipeFile = resource_tuple('PipeFile', [
-    'id',
-    'flags'
-])
+class RegFile(Resource):
+    """
+    Regular file    
+    """
+    id = "file id"
+    path = "file path"
+    size = "file size"
+    pos = "current in-file position"
+    flags = "opened file flags"
+    mode = "file open mode"
 
-"""
-Virtual process memory global map
-"""
-VmInfo = resource_tuple('VmInfo', [
-    'arg_start',
-    'arg_end',
-    'brk',
-    'env_start',
-    'env_end',
-    'code_start',
-    'code_end',
-    'data_start',
-    'data_end',
-    'brk_start',
-    'stack_start',
-    'dumpable',
-    'exe_file_id',
-    'saved_auxv'
-])
 
-"""
-Virtual memory area
-"""
-VmArea = resource_tuple('VmArea', [
-    'start',
-    'end',
-    'pgoff',
-    'shmid',
-    'prot',  # set of strings
-    'flags',  # set of strings
-    'status',
-    'fd',
-    'fdflags'
-])
+class PipeFile(Resource):
+    """
+    Structure, which describes one pipe
+    """
+    id = """pipe id (file id)"""
+    flags = """pipe open flags"""
 
-"""
-Map of pages to fill in a target process address space
-"""
-PageMap = resource_tuple('PageMap', [
-    'pages_id',  # id to identify file, where raw pages are stored
-    'maps'  # list of entries { "vaddr": ..., "nr_pages": ... }
-])
 
-"""
-Shared Anonymous Memory record, it is described here only by it's id and pagemap;
-It's relation to any of VMA structs is not handled here explicitly (only implicitly,
-with shmid)
-"""
-SharedAnonMem = resource_tuple('SharedAnonMem', [
-    'id',  # id of shared memory
-    'pagemap'  # page map for this shared anon memory, that is PageMap instance
-])
+class VmInfo(Resource):
+    """
+    Virtual process memory global map
+    """
+    arg_start = """arguments section start"""
+    arg_end = """arguments section end"""
+    brk = """heap"""
+    env_start = """env vars start"""
+    env_end = """env vars end"""
+    code_start = """code segment start"""
+    code_end = """code segment end"""
+    data_start = """data segment start"""
+    data_end = """data segment end"""
+    brk_start = """heap start"""
+    stack_start = """stack segment start"""
+    dumpable = """dumpable flag"""
+    exe_file_id = """identifier for executable"""
+    saved_auxv = """TODO"""
 
-Application = collections.namedtuple('App', [
-    'processes',
-    'regular_files',
-    'pipe_files',
-    'shared_anon_mem'
-])
+
+class VmArea(Resource):
+    """
+    Virtual memory area
+    """
+    start = """"""
+    end = """"""
+    pgoff = """"""
+    shmid = """"""
+    prot = """"""
+    flags = """"""
+    status = """"""
+    fd = """"""
+    fdflags = """"""
+
+
+class PageMap(Resource):
+    """
+    Map of pages to fill in a target process address space
+    """
+    pages_id = """id to identify file, where raw pages are stored"""
+    maps = """list of entries { "vaddr": ..., "nr_pages": ... }"""
+
+
+class SharedAnonMem(Resource):
+    """
+    Shared Anonymous Memory record, it is described here only by it's id and pagemap;
+    It's relation to any of VMA structs is not handled here explicitly (only implicitly,
+    with shmid)
+    """
+    id = """id of shared memory"""
+    pagemap = """page map for this shared anon memory, that is PageMap instance"""
+
+
+class Application(DataClass):
+    """
+    Application data class
+    """
+    processes = """list of processes"""
+    regular_files = """list of regular files"""
+    pipe_files = """list of pipes"""
+    shared_anon_mem = """list of shared anonymous memory files"""
 
 
 # class App:

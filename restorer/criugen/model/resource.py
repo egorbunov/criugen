@@ -1,11 +1,4 @@
 from abc import abstractmethod, ABCMeta, abstractproperty
-import collections
-
-# We tie each resource with id with this wrapper
-ResourceWrapper = collections.namedtuple('ResourceWrapper', [
-    'resource_id',
-    'r'
-])
 
 
 class ResourceProvider(object):
