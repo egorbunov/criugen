@@ -9,18 +9,19 @@ We have next actions:
 * process `[p]` sends resource `{r}` to process `[q]`      ~~~ `[p] sends {r} to [q]`
 """
 
-from collections import namedtuple
+from utils.dataclass import DataClass
 
-CreateAction = namedtuple('CreateAction', [
-    'process',
-    'resource',  # may be process too
-    'handle'
-])
 
-SendAction = namedtuple('SendAction', [
-    'processFrom',
-    'processTo',
-    'resource',
-    'handleFrom',
-    'handleTo'
-])
+class Action(DataClass):
+    pass
+
+
+class CreateAction(Action):
+    process = "creator"
+    resource = "resource, which may be process too"
+
+
+class SendAction(Action):
+    processFrom = ""
+    processTo = ""
+    resource = ""
