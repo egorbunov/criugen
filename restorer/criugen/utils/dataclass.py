@@ -10,7 +10,7 @@ import collections
 import warnings
 
 
-def mapgen(init, fun):
+def iterate(fun, init):
     while True:
         yield init
         init = fun(init)
@@ -57,14 +57,11 @@ class DataClassMeta(type):
         return filed_names
 
     @staticmethod
-    def __hooked_init(self, *args, **kwargs):
+    def __hooked_init(self, **kwargs):
         """Method, which is called during instance creation
 
         Ensures, that all fields are initialized
         """
-        if args:
-            raise Exception("Can't take no-keyword argumetns =(")
-
         for field in self.__slots__:
             if field not in kwargs:
                 raise FieldNotInitialized(field)
@@ -92,7 +89,7 @@ class DataClassMeta(type):
 
             # choosing highest parent with DataClassMeta metaclass
             # TODO: think about proper delegation
-            setattr_delegat = next(c for c in mapgen(type(self), getbase)
+            setattr_delegat = next(c for c in iterate(getbase, type(self))
                                    if not hasattr(getbase(c), '__metaclass__')
                                    or getbase(c).__metaclass__ != DataClassMeta)
 
