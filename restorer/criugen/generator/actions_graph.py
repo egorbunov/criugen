@@ -27,33 +27,74 @@ PS: There are the `[god]` process, which exists during the whole restoration pro
 does not need to be created.
 """
 
-from model.resource import ResourceProvider
+import itertools
+
+import model.crdata as crdata
+from actions import *
+from properties import *
 from model.pstree import ProcessTree
-from model.files import RegularFilesProvider
-from model.vm import PrivateVmas, SharedVmas
+from model.resource import ResourceProvider
 
 
-def __build_properties():
-    pass
+def _actions_for_sendable_resource(resource_provider, resource):
+    holders = resource_provider.get_resource_holders(resource)
+    resource_creator = min(holders, key=lambda process: process.pid)
+    return [CreateAction(process=resource_creator, resource=resource)] + \
+           [SendAction(processFrom=resource_creator, processTo=p) for p in holders if p != resource_creator]
 
 
-def __build_actions_for_sendable_resources(resource_provider):
-    resources = resource_provider.get_all_resources()
-
-    for r in resources:
-        holders = resource_provider.get_resource_holders(r)
-        min(holders, key=lambda h: h.p)
+def _build_actions_for_sendable_resources(resource_provider):
+    return list(itertools.chain.from_iterable(
+        _actions_for_sendable_resource(resource_provider, r) for r in resource_provider.get_all_resources()
+    ))
 
 
-def __build_actions_for_inherited_resources(resource_provider):
-    pass
+def _get_single_process_root(processes):
+    """
+    Simply finds root process for given list of processes
+    All processes from list must form a tree, if that is not
+    true, exception is thrown
+    :param processes: list of processes
+    :type processes: list[crdata.Process]
+    :return: process, which is the root of passed process tree
+    :rtype: crdata.Process
+    """
+
+    pids = set(p.pid for p in processes)
+    forest_roots = [p for p in processes if p.ppid not in pids]
+    # due to nature of processes set, we are sure, that it forms a single tree or forest of trees
+    # so the only thing we need to check, is that it is not a forest, but single tree
+    if not forest_roots or len(forest_roots) > 1:
+        raise Exception("Processes do not form a single tree")
+    return forest_roots[0]
 
 
-def __build_actions_for_non_sharable_resources(resource_provider):
-    pass
+def _actions_for_inherited_resource(resource_provider, resource):
+    holders = resource_provider.get_resource_holders(resource)
+    resource_creator = _get_single_process_root(holders)
+    return [CreateAction(process=resource_creator, resource=resource)]
 
 
-def __build_action_vertices(resource_provider):
+def _build_actions_for_inherited_resources(resource_provider):
+    return list(itertools.chain.from_iterable(
+        _actions_for_inherited_resource(resource_provider, r) for r in resource_provider.get_all_resources()
+    ))
+
+
+def _actions_for_non_sharable_resources(resource_provider, resource):
+    holders = resource_provider.get_resource_holders(resource)
+    if len(holders) != 1:
+        raise Exception("Non-sharable resource must have single holder")
+    return [CreateAction(process=holders[0], resource=resource)]
+
+
+def _build_actions_for_non_sharable_resources(resource_provider):
+    return list(itertools.chain.from_iterable(
+        _actions_for_non_sharable_resources(resource_provider, r) for r in resource_provider.get_all_resources()
+    ))
+
+
+def _build_action_vertices(resource_provider):
     """
     Builds list of actions for single resource provider (see actions.py)
     :type resource_provider: ResourceProvider    
@@ -62,12 +103,36 @@ def __build_action_vertices(resource_provider):
 
     # here we distinguish between sendable > inherited > non-sharable resources
     # we prefer to send resources to resource inheritance (it is easier =))
-    if resource_provider.is_sendable:
-        return __build_actions_for_sendable_resources(resource_provider)
+    if resource_provider.is_sendable and not resource_provider.must_be_inherited:
+        return _build_actions_for_sendable_resources(resource_provider)
     elif resource_provider.is_inherited:
-        return __build_actions_for_inherited_resources(resource_provider)
+        return _build_actions_for_inherited_resources(resource_provider)
     else:
-        return __build_actions_for_non_sharable_resources(resource_provider)
+        return _build_actions_for_non_sharable_resources(resource_provider)
+
+
+def _build_properties(resource_provider):
+    """ Generates list of properties for single type of resources
+    :param resource_provider:
+    :type resource_provider: ResourceProvider
+    :return: 
+    """
+    props = []
+    resources = resource_provider.get_all_resources()
+
+    # adding dependency properties
+    props.extend(DependsProperty(process=p, dependantResource=r, dependencyResource=d)
+                 for r in resources
+                 for p in resource_provider.get_resource_holders(r)
+                 for d in resource_provider.get_dependencies(r))
+
+    if resource_provider.must_be_inherited or resource_provider.is_inherited and not resource_provider.is_sendable:
+        props.extend(InheritsProperty(process=p, resource=r)
+                     for r in resources
+                     for p in resource_provider.get_resource_holders(r)
+                     if p != _get_single_process_root(resource_provider.get_resource_holders(r))) # TODO: optimize
+
+    return props
 
 
 def build_action_graph(process_tree, resource_providers):
@@ -86,5 +151,10 @@ def build_action_graph(process_tree, resource_providers):
     :return: TODO?
     """
 
-    for resource_provider in resource_providers:
-        resource_provider.get
+    actions = list(itertools.chain.from_iterable(_build_action_vertices(rp) for rp in resource_providers))
+    print(actions)
+
+    properties = list(itertools.chain.from_iterable(_build_properties(rp) for rp in resource_providers))
+    print(properties)
+
+
