@@ -27,6 +27,22 @@ class PrivateVmas(ResourceProvider):
         # TODO implement
         pass
 
+    def get_resource_temporary_holders(self, resource):
+        """
+        Returns empty list, because we not support such functionality for private
+        VMAs.
+        
+        This probably, but hardly, may be changed, because it is imaginable:
+            * process A creates Private VMA
+            * process A forks process B
+            * process B forks process C
+            * process B removes Private VMA
+        You can see, that A and C share VMA (and this VMA is COWed), but process B
+        has closed it and so in the final processes snapshot it would hard to investigate
+        such behaviour
+        """
+        return []
+
     @property
     def is_sendable(self):
         return False
@@ -60,6 +76,12 @@ class SharedVmas(ResourceProvider):
     def get_resource_handles(self, resource, process):
         # TODO implement
         pass
+
+    def get_resource_temporary_holders(self, resource):
+        """
+        Returns empty list, for now. TODO: Can it be different?
+        """
+        return []
 
     @property
     def is_sendable(self):

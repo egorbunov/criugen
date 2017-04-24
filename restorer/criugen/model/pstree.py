@@ -8,6 +8,27 @@ class ProcessTree(ResourceProvider):
     Process tree built from processes list
     """
 
+    def __init__(self, processes):
+        super(ProcessTree, self).__init__()
+        self.processes = processes
+        self._fake_root = crdata.Process(resource_id=next_resource_id(),
+                                         pid=0, ppid=-1, pgid=-1, sid=-1,
+                                         state=-1, threads_ids=[], fdt={},
+                                         ids={}, vmas=[], vm_info={}, page_map={})
+        self._all_procs = processes + [self._fake_root]
+        self._root = next(p for p in processes if p.ppid == 0)
+        self._proc_map = {p.pid: p for p in processes}
+
+        def children_construct(acc, p):
+            if p.ppid not in acc:
+                acc[p.ppid] = []
+            acc[p.ppid].append(p)
+            if p.pid not in acc:
+                acc[p.pid] = []
+            return acc
+
+        self._proc_children = reduce(children_construct, self._all_procs, {})
+
     @property
     def must_be_inherited(self):
         return False
@@ -44,32 +65,17 @@ class ProcessTree(ResourceProvider):
         # process may be considered as something, that holds it's children
         return [self.proc_parent(resource)]
 
-    def __init__(self, processes):
-        super(ProcessTree, self).__init__()
-        self.processes = processes
-        self.__fake_root = crdata.Process(resource_id=next_resource_id(),
-                                          pid=0, ppid=-1, pgid=-1, sid=-1,
-                                          state=-1, threads_ids=[], fdt={},
-                                          ids={}, vmas=[], vm_info={})
-        self.__all_procs = processes + [self.__fake_root]
-        self.__root = next(p for p in processes if p.ppid == 0)
-        self.__proc_map = {p.pid: p for p in processes}
-
-        def children_construct(acc, p):
-            if p.ppid not in acc:
-                acc[p.ppid] = []
-            acc[p.ppid].append(p)
-            if p.pid not in acc:
-                acc[p.pid] = []
-            return acc
-
-        self.__proc_children = reduce(children_construct, self.__all_procs, {})
+    def get_resource_temporary_holders(self, resource):
+        """
+        Returns empty list, because process can't be temporary resource
+        """
+        return []
 
     def root_process(self):
         """
         :return: process tree root
         """
-        return self.__root
+        return self._root
 
     def proc_children(self, proc):
         """
@@ -77,7 +83,7 @@ class ProcessTree(ResourceProvider):
         :return: list of children processes for given process,
         :rtype: list[crdata.Process]
         """
-        return self.__proc_children(proc)
+        return self._proc_children(proc)
 
     def proc_parent(self, proc):
         """
@@ -86,8 +92,8 @@ class ProcessTree(ResourceProvider):
         :rtype: crdata.Process
         """
         if proc == self.root_process():
-            return self.__fake_root
-        return self.__proc_map[proc.ppid]
+            return self._fake_root
+        return self._proc_map[proc.ppid]
 
     def proc_by_pid(self, pid):
         """
@@ -95,4 +101,4 @@ class ProcessTree(ResourceProvider):
         :return: process structure instance
         :rtype: crdata.Process
         """
-        return self.__proc_map[pid]
+        return self._proc_map[pid]

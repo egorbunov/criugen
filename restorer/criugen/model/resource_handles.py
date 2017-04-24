@@ -11,6 +11,9 @@ import collections
 # Process works with such kernel resource using file descriptors and system calls
 FileDescriptor = int
 
+# Not specified file descriptor (means, that actual file descriptor is not important)
+ANY_FILE_DESCRIPTOR = FileDescriptor(-1)
+
 # PID
 ProcessId = int
 

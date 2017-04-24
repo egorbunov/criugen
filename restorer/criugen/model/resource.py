@@ -27,6 +27,8 @@ class ResourceProvider(object):
                | Thread              | thread id               |
         For now, handle is some kind of identifier or whatever, which lets us to "talk" to resource
         somehow
+    5. Resource may be obtained in a process for temporary purposes. For example one may open a file,
+       use file descriptor to create memory mapping and then close the file descriptor.
     """
 
     def __init__(self):
@@ -53,7 +55,7 @@ class ResourceProvider(object):
 
     @abstractproperty
     def must_be_inherited(self):
-        """
+        """ 
         Resource may be created, generally, in two ways: inherited during forking and created somehow after
         forking.
         :return: true if resource MUST be shared with process through inheritance (during forking)
@@ -70,13 +72,22 @@ class ResourceProvider(object):
 
     @abstractmethod
     def get_resource_holders(self, resource):
-        """
-        This method, practically, returns list of processes
+        """This method, practically, returns list of processes
 
         :param resource: some resource object
         :type resource: object
         :return: list processes holding given resource
         :rtype: list[crdata.Process]
+        """
+
+    @abstractmethod
+    def get_resource_temporary_holders(self, resource):
+        """Returns a list of processes, which only temporarily hold specified resource
+        
+        Resource is temporarily held if only it is not handled by process in it's
+        final restoration state
+        
+        :rtype: list[crdata.Process] 
         """
 
     @abstractmethod

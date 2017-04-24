@@ -70,15 +70,15 @@ class VmArea(Resource):
     """
     Virtual memory area
     """
-    start = """"""
-    end = """"""
-    pgoff = """"""
-    shmid = """"""
-    prot = """"""
-    flags = """"""
-    status = """"""
-    fd = """"""
-    fdflags = """"""
+    start = """start address of VM area"""
+    end = """end address of VM area"""
+    pgoff = """mapping offset (in file) in pages"""
+    shmid = """file id in case VMA is not anon, 0 otherwise"""  # TODO: investigate
+    prot = """protection flags"""
+    flags = """MAP flags"""
+    status = """detailed VMA type information"""
+    fd = """attached fd? not used?"""  # TODO: fill
+    fdflags = """file descriptor flags?"""  # TODO: fill
 
 
 class PageMap(Resource):
