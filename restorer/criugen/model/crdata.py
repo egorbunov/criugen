@@ -20,8 +20,7 @@ class Process(Resource):
     threads_ids = """set of thread ids"""
     fdt = """file descriptor table: map (dict) from file descriptor to file id"""
     vm_info = """global vm info (start and end addresses of segments and other stuff)"""
-    vmas = """array of pairs (id, VmArea structure), describing mappings in process vm
-              id is just an identifier of VMA, ids are per process, not per application"""
+    vmas = """array of VmArea structures, describing mappings in process vm"""
     ids = """various ids for process like it's namespace ids"""
     page_map = """map of pages to fill in target process VM"""
 

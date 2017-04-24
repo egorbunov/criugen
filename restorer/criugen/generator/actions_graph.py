@@ -8,8 +8,8 @@ For better explanation lets add next shortcut to describe, that process has a re
 
 Also remember that processes may create other processes, so:
 
-* `[p] creates [q]` is a possible rule
 * we also say: `[p] was created` if `[q] creates [p]` for some `[q]`
+* `[p] creates [q]` is a possible rule
 
 And basing on actions above and on properties (see properties.py) we have next 
 precedence relationships (`a <~~ b` <=> `b` precedes `a`):
@@ -37,10 +37,20 @@ from model.resource import ResourceProvider
 
 
 def _actions_for_sendable_resource(resource_provider, resource):
+    """ Builds list of actions, which must be done during sendable resource creation
+    """
     holders = resource_provider.get_resource_holders(resource)
-    resource_creator = min(holders, key=lambda process: process.pid)
+    tmp_holders = resource_provider.get_resource_temporary_holders(resource)
+    all_holders = holders + tmp_holders
+
+    if not all_holders:
+        print("No holder for resource: {}; skipping".format(resource))
+        return []
+
+    resource_creator = min(all_holders, key=lambda process: process.pid)
     return [CreateAction(process=resource_creator, resource=resource)] + \
-           [SendAction(processFrom=resource_creator, processTo=p) for p in holders if p != resource_creator]
+           [SendAction(processFrom=resource_creator, processTo=p, resource=resource)
+            for p in all_holders if p != resource_creator]
 
 
 def _build_actions_for_sendable_resources(resource_provider):
@@ -70,6 +80,9 @@ def _get_single_process_root(processes):
 
 
 def _actions_for_inherited_resource(resource_provider, resource):
+    """Builds list of actions, which are performed during inherited resource creation
+    That is just only resource creation at the root of process tree
+    """
     holders = resource_provider.get_resource_holders(resource)
     resource_creator = _get_single_process_root(holders)
     return [CreateAction(process=resource_creator, resource=resource)]
@@ -82,6 +95,9 @@ def _build_actions_for_inherited_resources(resource_provider):
 
 
 def _actions_for_non_sharable_resources(resource_provider, resource):
+    """Returns list of actions, which are performed during resource creation, which is not shared
+    Throws exception in case given resource has more than one holders (owners)
+    """
     holders = resource_provider.get_resource_holders(resource)
     if len(holders) != 1:
         raise Exception("Non-sharable resource must have single holder")
@@ -130,9 +146,37 @@ def _build_properties(resource_provider):
         props.extend(InheritsProperty(process=p, resource=r)
                      for r in resources
                      for p in resource_provider.get_resource_holders(r)
-                     if p != _get_single_process_root(resource_provider.get_resource_holders(r))) # TODO: optimize
+                     if p != _get_single_process_root(resource_provider.get_resource_holders(r)))  # TODO: optimize
 
     return props
+
+
+def _build_graph(action_vertices, properties):
+    """ Builds adjacency list graph representation from given action vertices and restoration properties
+    
+    Constructs edges between given action vertices
+    
+    :param action_vertices: list of actions
+    :type action_vertices: list[Action]
+    :param properties: list of restoration process properties
+    :type properties: list[Property]
+    :return: 
+    """
+
+    graph = {a: [] for a in action_vertices}
+
+    def _build_outgoing_for_create_action(a):
+        for v in (x for x in action_vertices if isinstance(x, CreateAction)):
+            pass
+
+    def _build_outgoing_for_send_action(a):
+        pass
+
+    for v in action_vertices:
+        if isinstance(v, CreateAction):
+            _build_outgoing_for_create_action(v)
+        elif isinstance(v, SendAction):
+            _build_outgoing_for_send_action(v)
 
 
 def build_action_graph(process_tree, resource_providers):
@@ -151,10 +195,10 @@ def build_action_graph(process_tree, resource_providers):
     :return: TODO?
     """
 
-    actions = list(itertools.chain.from_iterable(_build_action_vertices(rp) for rp in resource_providers))
-    print(actions)
+    action_vertices = list(itertools.chain.from_iterable(_build_action_vertices(rp) for rp in resource_providers))
+    print(action_vertices)
 
     properties = list(itertools.chain.from_iterable(_build_properties(rp) for rp in resource_providers))
     print(properties)
 
-
+    return {}

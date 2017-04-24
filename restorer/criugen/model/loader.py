@@ -182,7 +182,7 @@ def _parse_mm(mm_item):
     :return: (VmInfo, array of VmArea)
     """
     vm_info = _parse_vm_info(mm_item['entries'][0])
-    vmas = [(idx + 1, _parse_one_vma(e)) for idx, e in enumerate(mm_item['entries'][0]['vmas'])]
+    vmas = [_parse_one_vma(e) for e in mm_item['entries'][0]['vmas']]
     return vm_info, vmas
 
 

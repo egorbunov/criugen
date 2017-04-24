@@ -25,3 +25,11 @@ class SendAction(Action):
     processFrom = ""
     processTo = ""
     resource = ""
+
+
+class RemoveResourceHandle(Action):
+    """TODO: do we need it?
+    """
+    process = ""
+    resource = ""
+    handle = ""

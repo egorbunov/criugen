@@ -17,10 +17,10 @@ def main(args):
     print('Loading images from: "{}" ...'.format(args[1]))
     application = loader.load_from_imgs(args[1])
 
-    print_utils.print_crdata(application)
+    # print_utils.print_crdata(application)
 
-    # print('Generating program...')
-    # program = gen.generate_program(app=application)
+    print('Generating program...')
+    program = gen.generate_program(application)
     # print('OK')
     # if len(args) == 3:
     #     with open(args[2], 'w') as f:

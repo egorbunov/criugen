@@ -107,13 +107,13 @@ class RegularFilesProvider(ResourceProvider):
         if type(resource) is not crdata.RegFile:
             raise TypeError("Resource must be Regular File")
 
-        return self._file_to_holders[resource]
+        return list(self._file_to_holders[resource])
 
     def get_resource_temporary_holders(self, resource):
         if type(resource) is not crdata.RegFile:
             raise TypeError("Resource must be Regular File")
 
-        return self._file_to_tmp_holders[resource]
+        return list(self._file_to_tmp_holders[resource])
 
     def get_resource_handles(self, resource, process):
         if type(resource) is not crdata.RegFile:

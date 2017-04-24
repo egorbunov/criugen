@@ -5,7 +5,13 @@ Properties describe the restoration process properties and final process tree it
 from utils.dataclass import DataClass
 
 
-class InheritsProperty(DataClass):
+class Property(DataClass):
+    """Base property
+    """
+    pass
+
+
+class InheritsProperty(Property):
     """
       `[p] inherits {r}` -- this rule just tells us, that resource is inherited during clone/fork from parent process,
       meaning that `{r}` must be kept after forking. All resources that are also inherited due to clone/fork
@@ -15,7 +21,7 @@ class InheritsProperty(DataClass):
     resource = ""
 
 
-class DependsProperty(DataClass):
+class DependsProperty(Property):
     """
      `{q} depends on {r}`
     """
