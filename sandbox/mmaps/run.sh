@@ -1,6 +1,6 @@
 #! /bin/bash
 BINDIR=$(pwd)/bin
-BIN=$BINDIR/files
+BIN=$BINDIR/mmaps
 TESTFILE=$BINDIR/hello.txt
 LOGFILE=$BINDIR/log.txt
 DUMPDIR=$BINDIR/dump
@@ -30,3 +30,4 @@ echo "OK" && \
 echo "Converting to json..." && \
 "$TOJSONBIN" "$DUMPDIR" "$JSONDIR" && \
 echo "OK"
+
