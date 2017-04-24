@@ -16,23 +16,36 @@ def iterate(fun, init):
         init = fun(init)
 
 
-class FieldNotInitialized(Exception):
-    def __init__(self, field_name):
-        self.field_name = field_name
-
-    def __str__(self):
-        return "You forgot to initialize {} field".format(repr(self.field_name))
-
-
-class UnknownFieldsSpecified(Exception):
+class FieldsNotInitialized(Exception):
     def __init__(self, fields):
-        self.unk_fields = list(fields)
+        self.fields = fields
 
     def __str__(self):
-        return "Unknown fields passed: {}".format(repr(self.unk_fields))
+        return "You forgot to initialize {} fields".format(repr(self.fields))
+
+
+class UnknownFieldSpecified(Exception):
+    def __init__(self, field):
+        self.field = list(field)
+
+    def __str__(self):
+        return "Unknown fields passed: {}".format(repr(self.field))
 
 
 class ImmutableFieldChange(Exception):
+    def __init__(self, field):
+        self.field = field
+
+    def __str__(self):
+        return "Can't change immutable field: {}".format(repr(self.field))
+
+
+class BadInitArgument(Exception):
+    def __str__(self):
+        return "Bad constructor argument: it's either not base type instance or base type instance duplicate"
+
+
+class DuplicateFieldInit(Exception):
     def __init__(self, field):
         self.field = field
 
@@ -57,18 +70,33 @@ class DataClassMeta(type):
         return filed_names
 
     @staticmethod
-    def __hooked_init(self, **kwargs):
+    def __hooked_init(self, *args, **kwargs):
         """Method, which is called during instance creation
 
         Ensures, that all fields are initialized
+        
+        The data class can be initiated with keyword arguments or with
+        arguments, which must be instances of parent data classes (bases)
         """
-        for field in self.__slots__:
-            if field not in kwargs:
-                raise FieldNotInitialized(field)
+        bases = set(type(self).__bases__)
+        for a in args:
+            if type(a) not in bases:
+                raise BadInitArgument()
+            bases.remove(type(a))
+            for field in a.__slots__:
+                setattr(self, field, getattr(a, field))
+
+        for field in kwargs:
+            if hasattr(self, field):
+                raise DuplicateFieldInit(field)
+            if field not in self.__slots__:
+                raise UnknownFieldSpecified(field)
+
             setattr(self, field, kwargs[field])
 
-        if len(kwargs) != len(self.__slots__):
-            raise UnknownFieldsSpecified(set(kwargs) - set(self.__slots__))
+        not_initialized_fields = [field for field in self.__slots__ if not hasattr(self, field)]
+        if not_initialized_fields:
+            raise FieldsNotInitialized(not_initialized_fields)
 
     @staticmethod
     def __hooked_repr(self):
@@ -84,16 +112,7 @@ class DataClassMeta(type):
         """
 
         if not hasattr(self, field):
-            def getbase(cls):
-                return cls.__bases__[0]
-
-            # choosing highest parent with DataClassMeta metaclass
-            # TODO: think about proper delegation
-            setattr_delegat = next(c for c in iterate(getbase, type(self))
-                                   if not hasattr(getbase(c), '__metaclass__')
-                                   or getbase(c).__metaclass__ != DataClassMeta)
-
-            super(setattr_delegat, self).__setattr__(field, value)
+            object.__setattr__(self, field, value)
         else:
             raise ImmutableFieldChange(field)
 
