@@ -7,6 +7,10 @@ We have next actions:
 
 * process `[p]` creates resource `{r}`                     ~~~ `[p] creates {r}`
 * process `[p]` sends resource `{r}` to process `[q]`      ~~~ `[p] sends {r} to [q]`
+
+We also introduce temporary action: actions, which effect is temporary. That means,
+that if action affects process state, this state change must be undone before finishing
+restoration.
 """
 
 from utils.dataclass import DataClass
@@ -21,10 +25,23 @@ class CreateAction(Action):
     resource = "resource, which may be process too"
 
 
+class CreateTemporaryAction(CreateAction):
+    """The same as CreateAction, but creates temporary resource,
+    which trace must be cleared from process state after usage
+    """
+
+
 class SendAction(Action):
     processFrom = ""
     processTo = ""
     resource = ""
+
+
+class SendTemporaryAction(SendAction):
+    """The same as SendAction, but the recipient gets the resource as
+    temporary, so it must clear the trace of this resource after usage
+    """
+    pass
 
 
 class RemoveResourceHandle(Action):

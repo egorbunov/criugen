@@ -39,19 +39,27 @@ from model.resource import ResourceProvider
 def _actions_for_sendable_resource(resource_provider, resource):
     """ Builds list of actions, which must be done during sendable resource creation
     """
-    holders = resource_provider.get_resource_holders(resource)
+    regular_holders = resource_provider.get_resource_holders(resource)
     tmp_holders = resource_provider.get_resource_temporary_holders(resource)
-    all_holders = holders + tmp_holders
+    all_holders = regular_holders + tmp_holders
 
+    assert len(set(tmp_holders) & set(regular_holders)) == 0
     if not all_holders:
         print("No holder for resource: {}; skipping".format(resource))
         return []
 
     resource_creator = min(all_holders, key=lambda process: process.pid)
-    return [CreateAction(process=resource_creator, resource=resource)] + \
-           [SendAction(processFrom=resource_creator, processTo=p, resource=resource)
-            for p in all_holders if p != resource_creator]
+    actions = []
+    if resource_creator in regular_holders:  # resource creator holds resource not temporarily
+        actions.append(CreateAction(process=resource_creator, resource=resource))
+    else:
+        actions.append(CreateTemporaryAction(process=resource_creator, resource=resource))
 
+    actions += [SendAction(processFrom=resource_creator, processTo=p, resource=resource)
+                for p in regular_holders if p != resource_creator]
+    actions += [SendTemporaryAction(processFrom=resource_creator, processTo=p, resource=resource)
+                for p in tmp_holders if p != resource_creator]
+    return actions
 
 def _build_actions_for_sendable_resources(resource_provider):
     return list(itertools.chain.from_iterable(
