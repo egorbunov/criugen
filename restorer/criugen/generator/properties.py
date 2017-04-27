@@ -18,6 +18,7 @@ class InheritsProperty(Property):
       nature, but not mentioned in such `inherits` rule, must be closed/released in process `[p]`
     """
     process = ""
+    process_from = """parent of the process"""
     resource = ""
 
 
@@ -25,6 +26,5 @@ class DependsProperty(Property):
     """
      `{q} depends on {r}`
     """
-    process = ""
-    dependantResource = ""
-    dependencyResource = ""
+    dependant_resource = ""
+    dependency_resource = ""

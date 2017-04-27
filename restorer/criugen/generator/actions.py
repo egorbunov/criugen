@@ -32,8 +32,8 @@ class CreateTemporaryAction(CreateAction):
 
 
 class SendAction(Action):
-    processFrom = ""
-    processTo = ""
+    process_from = ""
+    process_to = ""
     resource = ""
 
 

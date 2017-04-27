@@ -11,14 +11,46 @@ Also remember that processes may create other processes, so:
 * we also say: `[p] was created` if `[q] creates [p]` for some `[q]`
 * `[p] creates [q]` is a possible rule
 
-And basing on actions above and on properties (see properties.py) we have next 
-precedence relationships (`a <~~ b` <=> `b` precedes `a`):
+And basing on actions above and on properties (see properties.py) we build
+precedence relationships (`a <~~ b` <=> `b` precedes `a`).
 
-* `[q] creates {r}` <~~ `[q] was created`
-* `[p] sends {r} to [q]` <~~ `[p] was created` AND `[q] was created` AND `[p] obtains {r}`
-* `[q] inherits {r}` ==> `[p] creates [q]` <~~ `[p] was created` AND `[p] obtains {r}`
-* `{q} depends on {r}` ==> `[p] obtains {q}` <~~ `[p] obtains {r}`
+Imagine that we have constructed set of actions: actions
+For each action in actions we construct next precedence relationships:
 
+* if action = `[q] creates {r}`, then
+    1. `[p] creates [q]` for some [p] ~~> action
+    
+* if action = `[p] sends {r} to [q]`, then
+    1. `[x] creates [p]` for some [x] ~~> action
+    2. `[y] creates [q]` for some [y] ~~> action
+    3. if `[p] creates {r}` in actions, then:
+           `[p] create {r} ~~> action
+    4. elif `[z] sends {r} to [p]` for some [z] in actions, then:
+           `[z] sends {r} to [p]` for some [z] ~~> action
+    5. else: [p] must inherit {r} from process above, in this case
+       no additional precedence relation created, it is not needed, 
+       because creation of [p] happens before action, that is guaranteed
+       by item 1.
+           
+Next if we have determined set of properties of our restoration process (see properties.py)
+For each property in properties:
+
+* if `{q} depends on {r}` in properties, then
+    1. `[p1] creates {r}` for some [p1] ~~> `[p2] creates {q}` for some [p2]  # TODO: redundant rule?
+    2. if [p2] != [p1] and `[p1] sends {r} to [p2]` in actions:
+           `[p1] sends {r} to [p2]` ~~> `[p2] creates {q}`
+    3. if [p2] inherits {r}, then no new precedence relations are added, because
+       [p2] creation is guaranteed to happen before `[p2] creates {q}`
+        
+* if `[p] inherits {r} from [q]` in properties (q is a parent of p), then
+    1. if `[q] creates {r}` in actions, then
+           `[q] creates {r}` ~~> `[q] creates [p]`
+    2. if `[x] sends {r} to [q]` (for some [x]) in actions, then
+           `[x] sends {r} to [q]` ~~> `[q] creates [p]`
+    3. if [q] inherits {r} from parent, then no new precedence relation
+       should be added, because [q] would have {r} just after [q] creation
+    
+    
 According to this relationship we can build a graph with edges showing precedence. This graph
 may help us to determine which actions must be done before others. As an additional idea such 
 graph may show, which restoration paths can be done truly in parallel?
@@ -55,11 +87,12 @@ def _actions_for_sendable_resource(resource_provider, resource):
     else:
         actions.append(CreateTemporaryAction(process=resource_creator, resource=resource))
 
-    actions += [SendAction(processFrom=resource_creator, processTo=p, resource=resource)
+    actions += [SendAction(process_from=resource_creator, process_to=p, resource=resource)
                 for p in regular_holders if p != resource_creator]
-    actions += [SendTemporaryAction(processFrom=resource_creator, processTo=p, resource=resource)
+    actions += [SendTemporaryAction(process_from=resource_creator, process_to=p, resource=resource)
                 for p in tmp_holders if p != resource_creator]
     return actions
+
 
 def _build_actions_for_sendable_resources(resource_provider):
     return list(itertools.chain.from_iterable(
@@ -135,28 +168,47 @@ def _build_action_vertices(resource_provider):
         return _build_actions_for_non_sharable_resources(resource_provider)
 
 
-def _build_properties(resource_provider):
+def _build_depends_props(resource_provider):
+    resources = resource_provider.get_all_resources()
+    return (DependsProperty(dependant_resource=r, dependency_resource=d)
+            for r in resources
+            for d in resource_provider.get_dependencies(r))
+
+
+def _build_inherits_props(process_tree, resource_provider):
+    resources = resource_provider.get_all_resources()
+    return (InheritsProperty(process=p, process_from=process_tree.proc_parent(p), resource=r)
+            for r in resources
+            for p in resource_provider.get_resource_holders(r)
+            if p != _get_single_process_root(resource_provider.get_resource_holders(r)))
+
+
+def _build_properties(process_tree, resource_provider):
     """ Generates list of properties for single type of resources
+    :param process_tree: process tree
+    :type process_tree: ProcessTree
     :param resource_provider:
     :type resource_provider: ResourceProvider
     :return: 
     """
-    props = []
-    resources = resource_provider.get_all_resources()
+    return list(itertools.chain(_build_depends_props(resource_provider),
+                                _build_inherits_props(process_tree, resource_provider)))
 
-    # adding dependency properties
-    props.extend(DependsProperty(process=p, dependantResource=r, dependencyResource=d)
-                 for r in resources
-                 for p in resource_provider.get_resource_holders(r)
-                 for d in resource_provider.get_dependencies(r))
 
-    if resource_provider.must_be_inherited or resource_provider.is_inherited and not resource_provider.is_sendable:
-        props.extend(InheritsProperty(process=p, resource=r)
-                     for r in resources
-                     for p in resource_provider.get_resource_holders(r)
-                     if p != _get_single_process_root(resource_provider.get_resource_holders(r)))  # TODO: optimize
-
-    return props
+def _build_adj_list_for_create_action(action, properties, all_actions):
+    """
+    action = [a] creates {b}
+    
+        1) [a] must be created before, so: ([q] creates [a]) ~~> action
+        2) 
+    
+    Creates adjacency list for given create action
+    :param action: action vertex
+    :param properties: list of properties
+    :param all_actions: list of all action vertices
+    :return: list of actions, ends of graph edges starting at given action
+    """
+    pass
 
 
 def _build_graph(action_vertices, properties):
@@ -173,18 +225,59 @@ def _build_graph(action_vertices, properties):
 
     graph = {a: [] for a in action_vertices}
 
-    def _build_outgoing_for_create_action(a):
-        for v in (x for x in action_vertices if isinstance(x, CreateAction)):
+    create_actions = [a for a in action_vertices if isinstance(a, CreateAction)]
+    send_actions = [a for a in action_vertices if isinstance(a, SendAction)]
+    assert len(create_actions) + len(send_actions) == len(action_vertices)
+
+    depends_props = [p for p in properties if isinstance(p, DependsProperty)]
+    inherits_props = [p for p in properties if isinstance(p, InheritsProperty)]
+    assert len(depends_props) + len(inherits_props) == len(properties)
+
+    cr_acts_by_resource = {a.resource: a for a in create_actions}
+
+    def get_resource_obtain_action(p, r):
+        cr_act = cr_acts_by_resource[r]
+        if cr_act.process == p:
+            return cr_act
+        for sa in send_actions:
+            if sa.resource_to == p and sa.resource == r:
+                return sa
+        return None
+
+    for act in create_actions:
+        cract = cr_acts_by_resource[act.resource]
+        graph[cract].append(act)
+
+    for act in send_actions:
+        from_cract = cr_acts_by_resource[act.process_from]
+        graph[from_cract].append(act)
+        to_cract = cr_acts_by_resource[act.process_to]
+        graph[to_cract].append(act)
+        obtain_act = get_resource_obtain_action(act.process_from, act.resource)
+        if not obtain_act:
+            # must check, that resource is inherited in process_from
             pass
+        else:
+            graph[obtain_act].append(act)
 
-    def _build_outgoing_for_send_action(a):
-        pass
+    for prop in depends_props:
+        dep_cr_act = cr_acts_by_resource[prop.dependant_resource]
+        dependency_cr_act = cr_acts_by_resource[prop.dependency_resource]
+        graph[dependency_cr_act].append(dep_cr_act)  # TODO: is it redundant?
+        dependency_obt_action = get_resource_obtain_action(dep_cr_act.process, prop.dependency_resource)
+        if not dependency_obt_action:
+            # must assert, that dependency resource is inherited
+            pass
+        else:
+            graph[dependency_obt_action].append(dep_cr_act)
 
-    for v in action_vertices:
-        if isinstance(v, CreateAction):
-            _build_outgoing_for_create_action(v)
-        elif isinstance(v, SendAction):
-            _build_outgoing_for_send_action(v)
+    for prop in inherits_props:
+        parent_obtain_resource_act = get_resource_obtain_action(prop.process_from, prop.resource)
+        child_cr_act = cr_acts_by_resource[prop.process_to]
+        assert child_cr_act.process == prop.process_from  # assert that proc_from is father of proc_to
+        graph[child_cr_act].append(parent_obtain_resource_act)
+
+    return graph
 
 
 def build_action_graph(process_tree, resource_providers):
@@ -203,10 +296,11 @@ def build_action_graph(process_tree, resource_providers):
     :return: TODO?
     """
 
-    action_vertices = list(itertools.chain.from_iterable(_build_action_vertices(rp) for rp in resource_providers))
+    action_vertices = list(itertools.chain.from_iterable(_build_action_vertices(rp)
+                                                         for rp in resource_providers))
     print(action_vertices)
-
-    properties = list(itertools.chain.from_iterable(_build_properties(rp) for rp in resource_providers))
+    properties = list(itertools.chain.from_iterable(_build_properties(process_tree, rp)
+                                                    for rp in resource_providers))
     print(properties)
-
-    return {}
+    graph = _build_graph(action_vertices, properties)
+    return graph
