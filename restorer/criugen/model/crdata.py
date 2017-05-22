@@ -107,7 +107,7 @@ class Application(DataClass):
     """
     Application data class
     """
-    processes = """list of processes"""
-    regular_files = """list of regular files"""
-    pipe_files = """list of pipes"""
-    shared_anon_mem = """list of shared anonymous memory files"""
+    processes = """list of processes, list[Process]"""
+    regular_files = """list of regular files, list[RegFile]"""
+    pipe_files = """list of pipes, list[PipeFile]"""
+    shared_anon_mem = """list of shared anonymous memory files, list[SharedAnonMem]"""

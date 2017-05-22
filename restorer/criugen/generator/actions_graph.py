@@ -233,25 +233,27 @@ def _build_graph(action_vertices, properties):
     inherits_props = [p for p in properties if isinstance(p, InheritsProperty)]
     assert len(depends_props) + len(inherits_props) == len(properties)
 
-    cr_acts_by_resource = {a.resource: a for a in create_actions}
+    create_acts_by_resource = {a.resource: a for a in create_actions}  # only one create action per resource
 
     def get_resource_obtain_action(p, r):
-        cr_act = cr_acts_by_resource[r]
+        cr_act = create_acts_by_resource[r]
         if cr_act.process == p:
             return cr_act
         for sa in send_actions:
-            if sa.resource_to == p and sa.resource == r:
+            if sa.process_to == p and sa.resource == r:
                 return sa
         return None
 
+    # process creation goes before creation of any resource by this process
     for act in create_actions:
-        cract = cr_acts_by_resource[act.resource]
+        cract = create_acts_by_resource[act.process]
         graph[cract].append(act)
 
+    # processing send actions
     for act in send_actions:
-        from_cract = cr_acts_by_resource[act.process_from]
+        from_cract = create_acts_by_resource[act.process_from]
         graph[from_cract].append(act)
-        to_cract = cr_acts_by_resource[act.process_to]
+        to_cract = create_acts_by_resource[act.process_to]
         graph[to_cract].append(act)
         obtain_act = get_resource_obtain_action(act.process_from, act.resource)
         if not obtain_act:
@@ -260,9 +262,10 @@ def _build_graph(action_vertices, properties):
         else:
             graph[obtain_act].append(act)
 
+    # processing depends properties
     for prop in depends_props:
-        dep_cr_act = cr_acts_by_resource[prop.dependant_resource]
-        dependency_cr_act = cr_acts_by_resource[prop.dependency_resource]
+        dep_cr_act = create_acts_by_resource[prop.dependant_resource]
+        dependency_cr_act = create_acts_by_resource[prop.dependency_resource]
         graph[dependency_cr_act].append(dep_cr_act)  # TODO: is it redundant?
         dependency_obt_action = get_resource_obtain_action(dep_cr_act.process, prop.dependency_resource)
         if not dependency_obt_action:
@@ -271,13 +274,25 @@ def _build_graph(action_vertices, properties):
         else:
             graph[dependency_obt_action].append(dep_cr_act)
 
+    # processing inheritance property
     for prop in inherits_props:
         parent_obtain_resource_act = get_resource_obtain_action(prop.process_from, prop.resource)
-        child_cr_act = cr_acts_by_resource[prop.process_to]
+        child_cr_act = create_acts_by_resource[prop.process_to]
+
         assert child_cr_act.process == prop.process_from  # assert that proc_from is father of proc_to
+
         graph[child_cr_act].append(parent_obtain_resource_act)
 
     return graph
+
+
+def topsort_actions_graph(graph):
+    """
+    Perform topological sort of the graph
+    :param graph: graph, returned by `build_action_graph` function
+    :return: list of actions
+    """
+    pass
 
 
 def build_action_graph(process_tree, resource_providers):
