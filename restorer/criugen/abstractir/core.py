@@ -19,7 +19,10 @@ def initialize_conceptual_resource_tree(app):
     process_tree = _init_conceptual_process_tree(app)
 
     # initializing regular files
-    p_files.init_regular_files_resources(process_tree, app)
+    reg_file_map = p_files.init_regular_files_resources(process_tree, app)
+
+    # initializing shared mem
+    shmem_map = p_files.init_shared_anon_mem_resources(process_tree, app)
 
     # initializing virtual memory areas
 

@@ -64,6 +64,20 @@ class RegularFileConcept(ResourceConcept):
         return True
 
 
+class SharedMemConcept(ResourceConcept):
+    @property
+    def handle_types(self):
+        return [resource_handles.FileDescriptor]
+
+    @property
+    def is_sharable(self):
+        return True
+
+    @property
+    def is_inherited(self):
+        return True
+
+
 class ProcessGroupConcept(ResourceConcept):
     @property
     def handle_types(self):
