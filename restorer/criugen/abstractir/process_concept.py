@@ -1,3 +1,6 @@
+from resource_concept import ResourceConcept
+
+
 class ProcessConcept(object):
     """Conceptual process, which contains pairs of resource and handle
     It stores resources via ResourceConcept and handles to them within
@@ -27,11 +30,15 @@ class ProcessConcept(object):
 
     def get_resources(self):
         """ 
-        :return: all resources, including temporary 
+        :return: all resources, including temporary
+        :rtype: iterable[ResourceConcept]
         """
         return self._resources.keys()
 
     def get_tmp_resources(self):
+        """
+        :rtype: iterable[ResourceConcept]
+        """
         return self._tmp_resources.keys()
 
     def get_handles(self, resource):
