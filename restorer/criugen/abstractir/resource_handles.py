@@ -1,7 +1,7 @@
 """ Resource handlers type aliases
 """
 
-from utils.dataclass import DataClass
+import collections
 
 # Almost every resource in our model is accessed via file descriptor:
 #     - regular file
@@ -20,9 +20,17 @@ ProcessId = int
 # TID
 ThreadId = int
 
+# GID
+GroupId = int
 
-# Virtual memory area handle
-# That is just a pair of two integers: start of virtual memory area and its length
-class VMAHandle(DataClass):
-    start = "VMA start"
-    length = "VMA length"
+# SID
+SessionId = int
+
+# For resources, which don't need handle
+NO_HANDLE = None
+
+# Handle to input side of the pipe
+PipeInputHandle = collections.namedtuple("PipeInputHandle", ["fd"])
+
+# Handle to output side of the pipe
+PipeOutputHandle = collections.namedtuple("PipeOutputHandle", ["fd"])
