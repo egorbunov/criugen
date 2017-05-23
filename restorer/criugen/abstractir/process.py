@@ -14,6 +14,10 @@ class ProcessConcept(object):
     def pid(self):
         return self._pid
 
+    @property
+    def ppid(self):
+        return self._parent_pid
+
     def add_resource(self, resource, handle):
         self._resources.setdefault(resource, set()).add(handle)
 
