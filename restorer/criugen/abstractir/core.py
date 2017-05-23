@@ -4,6 +4,7 @@ from process_concept import ProcessConcept
 import util
 import p_files
 import p_private
+import p_vmas
 
 
 def initialize_conceptual_resource_tree(app):
@@ -25,6 +26,8 @@ def initialize_conceptual_resource_tree(app):
     shmem_map = p_files.init_shared_anon_mem_resources(process_tree, app)
 
     # initializing virtual memory areas
+    p_vmas.init_private_vma_resources(process_tree, app, reg_file_map)
+    p_vmas.init_shared_vma_resources(process_tree, app, shmem_map, reg_file_map)
 
     # initializing process internal private state
     p_private.init_internal_state_resources(process_tree, app)
