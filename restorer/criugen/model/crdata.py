@@ -1,4 +1,4 @@
-from utils.dataclass import DataClass
+from pyutils.dataclass import DataClass
 
 
 class Resource(DataClass):
@@ -12,17 +12,19 @@ class Process(Resource):
     """
     Process data structure
     """
-    pid = """process id"""
-    ppid = """process parent pid"""
-    pgid = """process group id"""
-    sid = """process session id"""
+    pid = """process id"""  # type: int
+    ppid = """process parent pid"""  # type: int
+    pgid = """process group id"""  # type: int
+    sid = """process session id"""  # type: int
     state = """process state"""
     threads_ids = """set of thread ids"""
-    fdt = """file descriptor table: map (dict) from file descriptor to file id"""
+    fdt = """file descriptor table: map from file descriptor to file id"""  # type: dict
     vm_info = """global vm info (start and end addresses of segments and other stuff)"""
-    vmas = """array of VmArea structures, describing mappings in process vm"""
+    vmas = """array of VmArea structures, describing mappings in process vm"""  # type: list[VmArea]
     ids = """various ids for process like it's namespace ids"""
     page_map = """map of pages to fill in target process VM"""
+    fs = """file system properties"""
+    sigact = """signal actions (signal handling) stuff"""
 
 
 class File(Resource):
@@ -35,7 +37,6 @@ class RegFile(File):
     """
     Regular file    
     """
-    id = "file id"
     path = "file path"
     size = "file size"
     pos = "current in-file position"
@@ -103,11 +104,24 @@ class SharedAnonMem(Resource):
     pagemap = """page map for this shared anon memory, that is PageMap instance"""
 
 
+class SignalAction(Resource):
+    sigaction = """signal action"""
+    flags = """flags"""
+    restorer = """restorer"""
+    mask = """signal mask"""
+
+
+class FSProps(Resource):
+    cwd_id = """current working dir file id"""
+    root_id = """process root dir file id"""
+    umask = """user privileges mask"""
+
+
 class Application(DataClass):
     """
     Application data class
     """
-    processes = """list of processes, list[Process]"""
-    regular_files = """list of regular files, list[RegFile]"""
-    pipe_files = """list of pipes, list[PipeFile]"""
-    shared_anon_mem = """list of shared anonymous memory files, list[SharedAnonMem]"""
+    processes = """list of processes"""  # type: list[Process]
+    regular_files = """list of regular files"""  # type: list[RegFile]
+    pipe_files = """list of pipes"""  # type: list[PipeFile]
+    shared_anon_mem = """list of shared anonymous memory files"""  # type: list[SharedAnonMem]

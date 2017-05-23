@@ -7,7 +7,7 @@ import pycriu
 
 import crconstants
 import crdata
-from resource_handles import *
+# from resource_handles import *
 
 # resource ids generator
 __gen_resource_id = itertools.count()
@@ -116,6 +116,38 @@ def _parse_pagemap(pagemap_item):
     )
 
 
+def _parse_sigacts(sigact_item):
+    """
+    :param sigact_item: item loaded from sigacts-{pid} image 
+    :return: array of sigaction descriptions
+    :rtype: list[crdata.SignalAction]
+    """
+    return [
+        crdata.SignalAction(
+            resource_id=next_resource_id(),
+            sigaction=e['sigaction'],
+            flags=e['flags'],
+            restorer=e['restorer'],
+            mask=e['mask']
+        )
+        for e in sigact_item['entries']
+    ]
+
+
+def _parse_fs(fs_item):
+    """
+    :param fs_item: item loaded from fs-{pid} image
+    :return: file system process properties
+    :rtype: crdata.FSProps
+    """
+    return crdata.FSProps(
+        resource_id=next_resource_id(),
+        cwd_id=fs_item['entries'][0]['cwd_id'],
+        root_id=fs_item['entries'][0]['root_id'],
+        umask=fs_item['entries'][0]['umask']
+    )
+
+
 def _parse_one_process(process_item, source_path, image_type):
     pid = process_item["pid"]
     ppid = process_item["ppid"]
@@ -140,7 +172,7 @@ def _parse_one_process(process_item, source_path, image_type):
     p_fdt = {}
     fd_info_item = _load_item(source_path, "fdinfo-{}".format(ids["files_id"]), image_type)
     if fd_info_item is not None:
-        p_fdt = {FileDescriptor(e["fd"]): e["id"] for e in fd_info_item["entries"]}
+        p_fdt = {e["fd"]: e["id"] for e in fd_info_item["entries"]}
 
     mm_item = _load_item(source_path, "mm-{}".format(pid), image_type)
     p_vminfo, p_vmas = _parse_mm(mm_item)
@@ -149,13 +181,16 @@ def _parse_one_process(process_item, source_path, image_type):
     pagemap = _parse_pagemap(pagemap_item)
 
     sigacts_item = _load_item(source_path, "sigacts-{}".format(pid), image_type)
+    sigacts = _parse_sigacts(sigacts_item)
+
     fs_item = _load_item(source_path, "fs-{}".format(pid), image_type)
+    fs_props = _parse_fs(fs_item)
 
     return crdata.Process(resource_id=next_resource_id(),
                           pid=pid, ppid=ppid, pgid=pgid,
                           sid=sid, threads_ids=threads,
                           state=p_state, fdt=p_fdt, ids={}, vmas=p_vmas,
-                          vm_info=p_vminfo, page_map=pagemap)
+                          vm_info=p_vminfo, page_map=pagemap, fs=fs_props, sigact=sigacts)
 
 
 def _parse_reg_files(reg_files_item):
@@ -191,11 +226,35 @@ def _parse_shared_anon_pagemaps(source_path, image_type):
     Parses all image files with names `pagemap-shmem-{shmid}.{image_type}'
     :param source_path: root directory of dumped images
     :param image_type: type of image item (json or img)
-    :return:
+    :return: list of item names
     """
     shmem_pagemaps = [os.path.splitext(os.path.basename(s))[0]
                       for s in glob.glob(os.path.join(source_path, "pagemap-shmem-*.{}".format(image_type)))]
     return shmem_pagemaps
+
+
+def _load_shared_anon_mems(source_path, image_type):
+    """ Loads info about shared anon memory
+    
+    :param source_path: root directory of dumped images
+    :param image_type: type of image items (json or img)
+    :return: list of shared anon memory objects
+    """
+    image_names = _parse_shared_anon_pagemaps(source_path, image_type)
+
+    shmems = []
+
+    for img in image_names:
+        shmid = img.split("-")[-1]
+        pagemap_item = _load_item(source_path, img, image_type)
+        pagemap = _parse_pagemap(pagemap_item)
+        shmems.append(
+            crdata.SharedAnonMem(
+                resource_id=next_resource_id(),
+                id=shmid, pagemap=pagemap)
+        )
+
+    return shmems
 
 
 def _load_processes(source_path, image_type):
@@ -225,12 +284,14 @@ def load(source_path, image_type):
         item = _load_item(source_path, "pipes", image_type)
         pipe_files = _parse_pipe_files(item)
 
+    shared_anon_mem_list = _load_shared_anon_mems(source_path, image_type)
+
     # reading every process specific data
     processes = _load_processes(source_path, image_type)
     return crdata.Application(processes=processes,
                               regular_files=reg_files,
                               pipe_files=pipe_files,
-                              shared_anon_mem={})
+                              shared_anon_mem=shared_anon_mem_list)
 
 
 def load_from_jsons(source_path):
