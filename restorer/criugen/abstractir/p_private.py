@@ -22,8 +22,11 @@ def init_internal_state_resources(process_tree, application):
         page_map = ProcessInternalsConcept(p.page_map)
         state = ProcessInternalsConcept(p.state)
         vm_info = ProcessInternalsConcept(p.vm_info)
+        fs_props = ProcessInternalsConcept(p.fs)
+        sigacts = ProcessInternalsConcept(p.sigact)
 
         process_concept.add_resource(page_map, resource_handles.NO_HANDLE)
         process_concept.add_resource(state, resource_handles.NO_HANDLE)
         process_concept.add_resource(vm_info, resource_handles.NO_HANDLE)
-
+        process_concept.add_resource(fs_props, resource_handles.NO_HANDLE)
+        process_concept.add_resource(sigacts, resource_handles.NO_HANDLE)
