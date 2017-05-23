@@ -10,13 +10,22 @@ class ResourceConcept(object):
 
     def __init__(self, payload):
         self._payload = payload
+        self._dependencies = []
 
+    @property
     def payload(self):
         """
         :return: real resource object, contained within ResourceConcept wrapper
         """
         return self._payload
 
+    def add_dependency(self, resource):
+        self._dependencies.append(resource)
+
+    @property
+    def dependencies(self):
+        return self._dependencies
+    
     @abstractproperty
     def is_inherited(self):
         """
