@@ -4,7 +4,7 @@ Initialization of various file resources as concepts for middle IR
 
 from model import crdata
 from pstree import ProcessTreeConcept
-from resource_concept import RegularFileConcept, ResourceConcept, SharedMemConcept
+from resource_concept import RegularFileConcept, ResourceConcept, SharedMemConcept, PipeConcept
 from resource_handles import *
 
 
@@ -38,6 +38,20 @@ def init_shared_anon_mem_resources(process_tree, app):
     shared_mem_files = {shmem.id: SharedMemConcept(shmem) for shmem in app.shared_anon_mem}
     _init_files_common(process_tree, shared_mem_files, app)
     return shared_mem_files
+
+
+def init_pipe_resources(process_tree, app):
+    """ Fills process concepts from process_tree with regular file resources
+
+    :param process_tree: tree with processes (concepts) to fill with resources
+
+    :type process_tree: ProcessTreeConcept
+    :type app: crdata.Application
+
+    :return: list of pipe concepts
+    :rtype: list[PipeConcept]
+    """
+    return []
 
 
 def _init_files_common(process_tree, files, app):

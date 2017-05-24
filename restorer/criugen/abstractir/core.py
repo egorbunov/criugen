@@ -40,8 +40,7 @@ def initialize_conceptual_resource_tree(app):
     sessions = p_ids.init_sessions_resource(process_tree, app)
 
     # initializing pipes
-
-    # initializing other credentials
+    pipes = p_files.init_pipe_resources(process_tree, app)
 
 
 def _init_conceptual_process_tree(app):
