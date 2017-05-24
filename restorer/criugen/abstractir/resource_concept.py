@@ -1,14 +1,31 @@
 from abc import ABCMeta, abstractproperty
 import resource_handles
+import model.crdata as crdata
+
+
+class WrongResourceConceptPayload(Exception):
+    """ Thrown in case user tries to instantiate ResourceConcept (see below)
+    with wrong payload (type mismatch)
+    """
+
+    def __init__(self, expected, actual):
+        super(WrongResourceConceptPayload, self).__init__(
+            "expected = [{}], got = [{}]".format(expected, actual)
+        )
 
 
 class ResourceConcept(object):
     """Very straightforward conceptual resource class, which wraps the specific
     resource data
+    
+    TODO: that would be better for all property methods to be static and abstract somehow, because
+     they are actually constant expressions
     """
     __metaclass__ = ABCMeta
 
     def __init__(self, payload):
+        if not isinstance(payload, self.payload_type):
+            raise WrongResourceConceptPayload(self.payload_type, type(payload))
         self._payload = payload
         self._dependencies = []
 
@@ -25,6 +42,15 @@ class ResourceConcept(object):
     @property
     def dependencies(self):
         return self._dependencies
+
+    @abstractproperty
+    def payload_type(self):
+        """
+        This payload type is almost 100% for documentation purposes 
+        
+        :return: type of stored payload or tuple of possible stored types
+        """
+        return object
     
     @abstractproperty
     def is_inherited(self):
@@ -52,6 +78,10 @@ class ResourceConcept(object):
 
 class RegularFileConcept(ResourceConcept):
     @property
+    def payload_type(self):
+        return crdata.RegFile
+
+    @property
     def handle_types(self):
         return [resource_handles.FileDescriptor]
 
@@ -65,6 +95,10 @@ class RegularFileConcept(ResourceConcept):
 
 
 class SharedMemConcept(ResourceConcept):
+    @property
+    def payload_type(self):
+        return crdata.SharedAnonMem
+
     @property
     def handle_types(self):
         return [resource_handles.FileDescriptor]
@@ -80,6 +114,13 @@ class SharedMemConcept(ResourceConcept):
 
 class ProcessGroupConcept(ResourceConcept):
     @property
+    def payload_type(self):
+        """
+        group resource is represented as a group id via integer 
+        """
+        return int
+
+    @property
     def handle_types(self):
         return [resource_handles.GroupId]
 
@@ -94,6 +135,13 @@ class ProcessGroupConcept(ResourceConcept):
 
 class ProcessSessionConcept(ResourceConcept):
     @property
+    def payload_type(self):
+        """
+        session resource payload is represented as a session id via integer 
+        """
+        return int
+
+    @property
     def handle_types(self):
         return [resource_handles.SessionId]
 
@@ -107,6 +155,10 @@ class ProcessSessionConcept(ResourceConcept):
 
 
 class PipeConcept(ResourceConcept):
+    @property
+    def payload_type(self):
+        return
+
     @property
     def handle_types(self):
         return [resource_handles.PipeInputHandle, resource_handles.PipeOutputHandle]
@@ -140,6 +192,11 @@ class FSPropsConcept(ResourceConcept):
     """ File system process properties like root dir,
     working dir and so on
     """
+
+    @property
+    def payload_type(self):
+        return crdata.FSProps
+
     @property
     def handle_types(self):
         return [resource_handles.NO_HANDLE]
@@ -156,6 +213,11 @@ class FSPropsConcept(ResourceConcept):
 class ProcessInternalsConcept(ResourceConcept):
     """ Internal process stuff like registers etc (TODO: reconsider)
     """
+
+    @property
+    def payload_type(self):
+        return object  # no any restrictions for now
+
     @property
     def handle_types(self):
         return [resource_handles.NO_HANDLE]
