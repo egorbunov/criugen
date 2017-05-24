@@ -148,22 +148,68 @@ def _parse_fs(fs_item):
     )
 
 
+def _parse_task_core(core_item):
+    """
+    :param core_item: item, loaded from core-{pid}, where pid is not thread id, but
+    process id, i.e. main thread id
+    :return: task core object (tc item field)
+    :rtype: crdata.ProcessCore
+    """
+    tc = core_item['entries'][0]['tc']
+    return crdata.ProcessCore(
+        resource_id=next_resource_id(),
+        task_state=tc['task_state'],
+        exit_code=tc['exit_code'],
+        personality=tc['personality'],
+        flags=tc['flags'],
+        blk_sigset=tc['blk_sigset'],
+        comm=tc['comm'],
+        timers=tc['timers'],
+        rlimits=tc['rlimits'],
+        cg_set=tc['cg_set'],
+        signals_s=tc['signals_s'],
+        loginuid=tc['loginuid'],
+        oom_score_adj=tc['oom_score_adj']
+    )
+
+
+def _parse_thread_core(core_item, thread_id):
+    """
+    :param core_item: item, loaded from core-{tid}, tid is a thread id
+    :return: thread core object
+    :rtype: crdata.ThreadCore
+    """
+
+    core = core_item['entries'][0]
+    return crdata.ThreadCore(
+        resource_id=next_resource_id(),
+        thread_id=thread_id,
+        mtype=core['mtype'],
+        thread_info=core['thread_info'],
+        thread_core=core['thread_core']
+    )
+
+
 def _parse_one_process(process_item, source_path, image_type):
     pid = process_item["pid"]
     ppid = process_item["ppid"]
     pgid = process_item["pgid"]
     sid = process_item["sid"]
-    threads = process_item["threads"]
 
-    core_item = _load_item(source_path, "core-{}".format(pid), image_type)
+    thread_ids = process_item["threads"]
+    core_items = {tid: _load_item(source_path, "core-{}".format(tid), image_type)
+                  for tid in thread_ids}
 
-    p_state = core_item["entries"][0]["tc"]["task_state"]
+    process_core = _parse_task_core(core_items[pid])
+    thread_cores = [_parse_thread_core(core_items[tid], tid) for tid in core_items]
+
+    p_state = process_core.task_state
     if p_state == crconstants.TASK_STATE_DEAD:
         # dead task (as I got it's a zombie) is empty one...
         return crdata.Process(resource_id=next_resource_id(),
                               pid=pid, ppid=ppid, pgid=pgid,
-                              sid=sid, state=p_state, threads_ids=threads,
-                              fdt={}, ids={}, vmas=[], vm_info={}, page_map={})
+                              sid=sid, thread_cores=[], core=None,
+                              fdt={}, ids=None, vmas=[], vm_info=None, page_map=None)
 
     ids_item = _load_item(source_path, "ids-{}".format(pid), image_type)
     ids = ids_item["entries"][0]
@@ -187,10 +233,19 @@ def _parse_one_process(process_item, source_path, image_type):
     fs_props = _parse_fs(fs_item)
 
     return crdata.Process(resource_id=next_resource_id(),
-                          pid=pid, ppid=ppid, pgid=pgid,
-                          sid=sid, threads_ids=threads,
-                          state=p_state, fdt=p_fdt, ids={}, vmas=p_vmas,
-                          vm_info=p_vminfo, page_map=pagemap, fs=fs_props, sigact=sigacts)
+                          pid=pid,
+                          ppid=ppid,
+                          pgid=pgid,
+                          sid=sid,
+                          thread_cores=thread_cores,
+                          core=process_core,
+                          fdt=p_fdt,
+                          ids={},
+                          vmas=p_vmas,
+                          vm_info=p_vminfo,
+                          page_map=pagemap,
+                          fs=fs_props,
+                          sigact=sigacts)
 
 
 def _parse_reg_files(reg_files_item):

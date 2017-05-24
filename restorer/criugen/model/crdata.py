@@ -16,8 +16,8 @@ class Process(Resource):
     ppid = """process parent pid"""  # type: int
     pgid = """process group id"""  # type: int
     sid = """process session id"""  # type: int
-    state = """process state"""
-    threads_ids = """set of thread ids"""
+    thread_cores = """list of thread cores"""  # type: list[ThreadCore]
+    core = """task core info"""  # type: ProcessCore
     fdt = """file descriptor table: map from file descriptor to file id"""  # type: dict
     vm_info = """global vm info (start and end addresses of segments and other stuff)"""
     vmas = """array of VmArea structures, describing mappings in process vm"""  # type: list[VmArea]
@@ -25,6 +25,35 @@ class Process(Resource):
     page_map = """map of pages to fill in target process VM"""
     fs = """file system properties"""
     sigact = """signal actions (signal handling) stuff"""
+
+
+class ThreadCore(Resource):
+    """
+    That is not CRIUs "thread_core", that is mirror of a core image file for a thread
+    and also slice of the main thread core without "tc" field
+    """
+    thread_id = "thread id"
+    mtype = """machine type"""
+    thread_info = """thread information (registers and stuff)"""
+    thread_core = """thread core information (user credentials included)"""
+
+
+class ProcessCore(Resource):
+    """
+    That is Task Core (tc in CRIUs core image)
+    """
+    task_state = "task state"
+    exit_code = "exit code"
+    personality = ""
+    flags = ""
+    blk_sigset = "TODO"
+    comm = "TODO"
+    timers = "TODO"
+    rlimits = "TODO"
+    cg_set = "TODO"
+    signals_s = "TODO"
+    loginuid = "TODO"
+    oom_score_adj = "TODO"
 
 
 class File(Resource):
