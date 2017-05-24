@@ -175,6 +175,11 @@ class PipeConcept(ResourceConcept):
 class VMAConcept(ResourceConcept):
     """ Virtual memory area concept
     """
+
+    @property
+    def payload_type(self):
+        return crdata.VmArea
+
     @property
     def handle_types(self):
         return [resource_handles.NO_HANDLE]

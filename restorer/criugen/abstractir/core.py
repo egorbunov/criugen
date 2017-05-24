@@ -5,6 +5,7 @@ import util
 import p_files
 import p_private
 import p_vmas
+import p_ids
 
 
 def initialize_conceptual_resource_tree(app):
@@ -33,8 +34,10 @@ def initialize_conceptual_resource_tree(app):
     p_private.init_internal_state_resources(process_tree, app)
 
     # initializing groups
+    groups = p_ids.init_groups_resource(process_tree, app)
 
     # initializing sessions
+    sessions = p_ids.init_sessions_resource(process_tree, app)
 
     # initializing pipes
 

@@ -14,18 +14,6 @@ FileDescriptor = int
 # Not specified file descriptor (means, that actual file descriptor is not important)
 ANY_FILE_DESCRIPTOR = FileDescriptor(-1)
 
-# PID
-ProcessId = int
-
-# TID
-ThreadId = int
-
-# GID
-GroupId = int
-
-# SID
-SessionId = int
-
 # For resources, which don't need handle
 NO_HANDLE = None
 
