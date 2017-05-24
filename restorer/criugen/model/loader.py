@@ -76,7 +76,7 @@ def _parse_one_vma(e):
         start=e['start'],
         end=e['end'],
         pgoff=e['pgoff'],
-        shmid=e['shmid'],
+        shmid=int(e['shmid']),
         prot=set([s.strip() for s in e['prot'].split("|")]),
         flags=set([s.strip() for s in e['flags'].split("|")]),
         status=set([s.strip() for s in e['status'].split("|")]),
@@ -300,9 +300,10 @@ def _load_shared_anon_mems(source_path, image_type):
     shmems = []
 
     for img in image_names:
-        shmid = img.split("-")[-1]
+        shmid = int(img.split("-")[-1])
         pagemap_item = _load_item(source_path, img, image_type)
         pagemap = _parse_pagemap(pagemap_item)
+
         shmems.append(
             crdata.SharedAnonMem(
                 resource_id=next_resource_id(),
