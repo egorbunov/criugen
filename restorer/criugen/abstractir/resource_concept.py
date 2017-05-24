@@ -1,6 +1,7 @@
 from abc import ABCMeta, abstractproperty
 import resource_handles
 import model.crdata as crdata
+import resource_adapters
 
 
 class WrongResourceConceptPayload(Exception):
@@ -157,7 +158,7 @@ class ProcessSessionConcept(ResourceConcept):
 class PipeConcept(ResourceConcept):
     @property
     def payload_type(self):
-        return
+        return resource_adapters.PipeResource
 
     @property
     def handle_types(self):
