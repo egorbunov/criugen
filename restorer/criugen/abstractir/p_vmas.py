@@ -46,7 +46,7 @@ def _init_vmas_one_process(process_concept, vmas, shmem_map, regfile_map):
         file_dependency = None
         if VMA_STATUS_FILE_SHARED in vma.status or VMA_STATUS_FILE_PRIVATE in vma.status:
             file_dependency = regfile_map[vma.shmid]
-        elif VMA_STATUS_ANON_SHARED:
+        elif VMA_STATUS_ANON_SHARED in vma.status:
             file_dependency = shmem_map[vma.shmid]
 
         resource = VMAConcept(vma)
