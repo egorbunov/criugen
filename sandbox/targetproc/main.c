@@ -17,6 +17,8 @@
 
 #include <sys/mman.h>
 
+#include <pthread.h>
+
 #include "utils.h"
 
 static const int MAP_SIZE = 4096 * 10;
@@ -27,6 +29,16 @@ void* shared_anon_mapper(int length);
 void* private_anon_mapper(int length);
 void* file_shared_mapper(int fd, int length);
 void* file_private_mapper(int fd, int length);
+
+// thread funcs
+void* idle_thread_fun(void* arg) {
+	static int counter = 0;
+	for (int i = 0; i < 100; ++i) {
+		counter += 1;
+		sleep(1);
+	}
+	return NULL;
+}
 
 int main(int argc, char* argv[])
 {
@@ -43,6 +55,18 @@ int main(int argc, char* argv[])
 
 	daemonize();	
 	add_log("%d", getpid());
+
+	// opening a pipe
+    int pipefd[2];
+	if (pipe(pipefd) < 0) {
+	    exit_err("pipe open");
+    }
+
+	// spwning additional thread
+	pthread_t th;
+	if (pthread_create(&th, NULL, idle_thread_fun, NULL) < 0) {
+		exit_err("thread spawn");
+	}
 
 	// start forking process tree
 	char filename_buf[50];

@@ -14,7 +14,7 @@ rm -rf ${JSONDIR}
 mkdir -p ${JSONDIR}
 
 rm $BIN
-gcc main.c -o "$BIN"
+gcc main.c -pthread -o "$BIN"
 
 $BIN "${LOGFILE}" &
 sleep 1
