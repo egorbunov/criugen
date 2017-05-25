@@ -77,7 +77,9 @@ class PipeFile(File):
     """
     Structure, which describes one pipe
     """
+    pipe_id = """special pipe id (not equal to file id)"""
     flags = """pipe open flags"""
+    fown = """file owner props"""
 
 
 class VmInfo(Resource):

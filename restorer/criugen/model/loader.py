@@ -62,11 +62,13 @@ def _parse_one_reg_file(entry):
 
 
 def _parse_one_pipe_file(entry):
-    flags = [s.strip() for s in entry["flags"].split("|")]
+    flags = int(entry["flags"], 16)  # hex str
     return crdata.PipeFile(
         resource_id=next_resource_id(),
-        id=entry["pipe_id"],
-        flags=flags
+        id=entry["id"],
+        pipe_id=entry["pipe_id"],
+        flags=flags,
+        fown=entry["fown"]
     )
 
 
