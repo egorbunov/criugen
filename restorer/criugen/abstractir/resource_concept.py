@@ -73,7 +73,7 @@ class ResourceConcept(object):
     def handle_types(self):
         """
         :return: array of handle types, which are created during resource creation
-        :rtype: list[type]
+        :rtype: frozenset[type]
         """
 
 
@@ -84,7 +84,7 @@ class RegularFileConcept(ResourceConcept):
 
     @property
     def handle_types(self):
-        return [resource_handles.FileDescriptor]
+        return frozenset([resource_handles.FileDescriptor])
 
     @property
     def is_sharable(self):
@@ -102,7 +102,7 @@ class SharedMemConcept(ResourceConcept):
 
     @property
     def handle_types(self):
-        return [resource_handles.FileDescriptor]
+        return frozenset([resource_handles.FileDescriptor])
 
     @property
     def is_sharable(self):
@@ -123,7 +123,7 @@ class ProcessGroupConcept(ResourceConcept):
 
     @property
     def handle_types(self):
-        return [resource_handles.GroupId]
+        return frozenset([resource_handles.GroupId])
 
     @property
     def is_sharable(self):
@@ -144,7 +144,7 @@ class ProcessSessionConcept(ResourceConcept):
 
     @property
     def handle_types(self):
-        return [resource_handles.SessionId]
+        return frozenset([resource_handles.SessionId])
 
     @property
     def is_sharable(self):
@@ -162,7 +162,7 @@ class PipeConcept(ResourceConcept):
 
     @property
     def handle_types(self):
-        return [resource_handles.PipeInputHandle, resource_handles.PipeOutputHandle]
+        return frozenset([resource_handles.PipeInputHandle, resource_handles.PipeOutputHandle])
 
     @property
     def is_inherited(self):
@@ -183,7 +183,7 @@ class VMAConcept(ResourceConcept):
 
     @property
     def handle_types(self):
-        return [resource_handles.NO_HANDLE]
+        return frozenset([resource_handles.NO_HANDLE])
 
     @property
     def is_inherited(self):
@@ -205,7 +205,7 @@ class FSPropsConcept(ResourceConcept):
 
     @property
     def handle_types(self):
-        return [resource_handles.NO_HANDLE]
+        return frozenset([resource_handles.NO_HANDLE])
 
     @property
     def is_inherited(self):
@@ -226,7 +226,7 @@ class ProcessInternalsConcept(ResourceConcept):
 
     @property
     def handle_types(self):
-        return [resource_handles.NO_HANDLE]
+        return frozenset([resource_handles.NO_HANDLE])
 
     @property
     def is_inherited(self):
