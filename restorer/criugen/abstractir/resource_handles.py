@@ -34,6 +34,8 @@ for example:
       resource with two userspace-level handles: socket A and socket B. So we introduce
       some kind of order on paired sockets, but it doesn't make the model less powerful (I hope so,
       really, I can't see any drawbacks at this moment)
+      
+Warning: all handles must be comparable in terms of value, not reference;
 """
 
 import collections

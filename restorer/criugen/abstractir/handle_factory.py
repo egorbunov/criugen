@@ -155,6 +155,17 @@ def make_handle_factories_map_for_process():
     }
 
 
+def is_fd_handle(handle):
+    """
+    Checks if given handle is a kind of a file descriptor
+    :param handle: 
+    :return: 
+    """
+    return isinstance(handle, FileDescriptor) or \
+           isinstance(handle, PipeReadHandle) or \
+           isinstance(handle, PipeWriteHandle)
+
+
 def construct_fd_handle_from_int(handle_type, value):
     """
     Just invokes constructor of handle_type with one given value passed
