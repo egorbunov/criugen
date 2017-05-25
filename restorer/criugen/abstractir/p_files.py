@@ -4,7 +4,7 @@ Initialization of various file resources as concepts for middle IR
 
 from model import crdata
 from pstree import ProcessTreeConcept
-from resource_concept import RegularFileConcept, ResourceConcept, SharedMemConcept, PipeConcept
+from resource_concepts import RegularFileConcept, ResourceConcept, SharedMemConcept, PipeConcept
 from resource_handles import *
 
 

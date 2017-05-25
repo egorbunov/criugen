@@ -1,4 +1,4 @@
-from resource_concept import ResourceConcept
+from resource_concepts import ResourceConcept
 
 
 class ProcessConcept(object):

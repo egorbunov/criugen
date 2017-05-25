@@ -8,17 +8,17 @@ import p_vmas
 import p_ids
 
 
-def initialize_conceptual_resource_tree(app):
+def _init_conceptual_process_tree(app):
     """ Reads application resources and initializes conceptual
     processes and resources from them
     
     :param app: read from dump application object
     :type app: crdata.Application
-    :return: list of global resources (for the whole tree) and list of 
-             process concepts
+    :return: conceptual process tree
+    :rtype: ProcessTreeConcept
     """
 
-    process_tree = _init_conceptual_process_tree(app)
+    process_tree = _make_empty_conceptual_process_tree(app)
 
     # initializing regular files
     reg_file_map = p_files.init_regular_files_resources(process_tree, app)
@@ -34,16 +34,18 @@ def initialize_conceptual_resource_tree(app):
     p_private.init_internal_state_resources(process_tree, app)
 
     # initializing groups
-    groups = p_ids.init_groups_resource(process_tree, app)
+    p_ids.init_groups_resource(process_tree, app)
 
     # initializing sessions
-    sessions = p_ids.init_sessions_resource(process_tree, app)
+    p_ids.init_sessions_resource(process_tree, app)
 
     # initializing pipes
-    pipes = p_files.init_pipe_resources(process_tree, app)
+    p_files.init_pipe_resources(process_tree, app)
+
+    return process_tree
 
 
-def _init_conceptual_process_tree(app):
+def _make_empty_conceptual_process_tree(app):
     """
     Constructs process tree with empty processes (no resources initialized so far)
     

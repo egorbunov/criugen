@@ -3,7 +3,7 @@ Initialization of private process resource concepts; by private we mean not shar
 internal process state, vm info, page map
 """
 
-from resource_concept import ProcessInternalsConcept, FSPropsConcept
+from resource_concepts import ProcessInternalsConcept, FSPropsConcept
 from model import crdata
 from pstree import ProcessTreeConcept
 import resource_handles
