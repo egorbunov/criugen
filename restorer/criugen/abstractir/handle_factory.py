@@ -132,7 +132,7 @@ def make_handle_factories_map_for_process():
 
     int_factory = IntBasedHandleFactory()
     return {
-        NO_HANDLE: _make_no_handle_factory(),
+        type(NO_HANDLE): _make_no_handle_factory(),
         FileDescriptor: _make_file_descriptor_factory(int_factory),
         PipeWriteHandle: _make_pipe_write_handle_factory(int_factory),
         PipeReadHandle: _make_pipe_read_handle_factory(int_factory)
