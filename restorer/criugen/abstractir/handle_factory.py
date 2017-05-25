@@ -27,6 +27,12 @@ class HandleFactory(object):
         'get_free_handle` method after that operation
         """
 
+    @abstractmethod
+    def is_handle_used(self, handle):
+        """ Returns true if given handle is already used (was returned from
+        factory)
+        """
+
 
 class IntBasedHandleFactory(HandleFactory):
     """ Integer handles. Free handles are generated consequently,
@@ -42,6 +48,9 @@ class IntBasedHandleFactory(HandleFactory):
         self._used_handles = set()  # type: set[int]
         self._top_unused = 0
         self._max_value = max_value
+
+    def is_handle_used(self, handle):
+        return handle in self._used_handles
 
     def get_free_handle(self):
         if self._top_unused >= self._max_value:
@@ -92,6 +101,9 @@ class IntHandleFactoryAdaptor(HandleFactory):
         self._handle_constructor = handle_constructor
         self._handle_destructor = int_getter
 
+    def is_handle_used(self, handle):
+        return self._int_factory.is_handle_used(self._handle_destructor(handle))
+
     def mark_handle_as_used(self, handle):
         int_value = self._handle_destructor(handle)
         self._int_factory.mark_handle_as_used(int_value)
@@ -107,6 +119,9 @@ class NoHandleFactory(HandleFactory):
     handle as handle, which do not conflict on handle level with other 
     resources
     """
+
+    def is_handle_used(self, handle):
+        return False
 
     def get_free_handle(self):
         return NO_HANDLE

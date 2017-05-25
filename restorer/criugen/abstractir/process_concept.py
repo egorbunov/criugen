@@ -76,6 +76,11 @@ class ProcessConcept(object):
 
     def _set_handle_is_used(self, handle):
         handle_factory = self._handle_factories[type(handle)]
+        if handle_factory.is_handle_used(handle):
+            # we ignore the fact of repeated handle here; that is because
+            # it can happen for tmp added resources and our algorithm can
+            # deal with it
+            return
         handle_factory.mark_handle_as_used(handle)
 
     def _get_next_handle_of_type(self, handle_type):
