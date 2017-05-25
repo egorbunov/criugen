@@ -1,4 +1,5 @@
 from resource_concepts import ResourceConcept
+from handle_factory import make_handle_factories_map_for_process, HandleFactory
 
 
 class ProcessConcept(object):
@@ -8,10 +9,20 @@ class ProcessConcept(object):
     """
 
     def __init__(self, pid, parent_pid):
+        """ For now pid and parent pid are not treated as resources:
+        1) we need them to build process tree
+        2) these id's can't change in linux processes environment,
+           so we treat them as constant process attributes
+
+        :param pid: process id 
+        :param parent_pid: process parent id
+        """
+
         self._pid = pid
         self._parent_pid = parent_pid
         self._resources = {}  # dict from resource to handle array
         self._tmp_resources = {}  # same as _resources, but temporary
+        self._handle_factories = make_handle_factories_map_for_process()  # type: dict[type, HandleFactory]
 
     @property
     def pid(self):
