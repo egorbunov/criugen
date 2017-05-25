@@ -7,6 +7,7 @@ in this file.
 
 from abc import ABCMeta, abstractmethod
 import sys
+from functools import partial
 
 from resource_handles import *
 
@@ -148,48 +149,38 @@ def make_handle_factories_map_for_process():
     int_factory = IntBasedHandleFactory()
     return {
         type(NO_HANDLE): _make_no_handle_factory(),
-        FileDescriptor: _make_file_descriptor_factory(int_factory),
-        PipeWriteHandle: _make_pipe_write_handle_factory(int_factory),
-        PipeReadHandle: _make_pipe_read_handle_factory(int_factory)
+        FileDescriptor: _make_fd_kind_handle_factory(int_factory, FileDescriptor),
+        PipeWriteHandle: _make_fd_kind_handle_factory(int_factory, PipeWriteHandle),
+        PipeReadHandle: _make_fd_kind_handle_factory(int_factory, PipeReadHandle)
     }
 
 
-def _make_file_descriptor_factory(int_factory):
-    """ Constructs new simple factory of FileDescriptor handles
+def construct_fd_handle_from_int(handle_type, value):
+    """
+    Just invokes constructor of handle_type with one given value passed
+    as argument
+    """
+    return handle_type(value)
+
+
+def get_int_from_fd_handle(handle):
+    """
+    Converts given fd-kind handle to integer (file descriptor value)
+    """
+    if isinstance(handle, FileDescriptor):
+        return handle
+    if isinstance(handle, (PipeWriteHandle, PipeReadHandle)):
+        return handle.fd
+
+
+def _make_fd_kind_handle_factory(int_factory, handle_type):
+    """ Constructs new simple handle_type factory, which constructs objects
+    of a handle_type
     :rtype: HandleFactory
     """
-
-    def identity(x): return x
-
-    def fd_construct(val): return FileDescriptor(val)
-
-    return IntHandleFactoryAdaptor(int_factory,
-                                   handle_constructor=fd_construct,
-                                   int_getter=identity)
-
-
-def _make_pipe_read_handle_factory(int_factory):
-    """ Constructs handle factory of PipeReadHandle objects
-    :rtype: HandleFactory
-    """
-
-    def read_handle_construct(val): return PipeReadHandle(fd=val)
-
-    def read_handle_destroy(handle): return handle.fd
-
-    return IntHandleFactoryAdaptor(int_factory, read_handle_construct, read_handle_destroy)
-
-
-def _make_pipe_write_handle_factory(int_factory):
-    """ Constructs handle factory of PipeWriteHandle objects
-    :rtype: HandleFactory 
-    """
-
-    def write_handle_construct(val): return PipeWriteHandle(fd=val)
-
-    def write_handle_destroy(handle): return handle.fd
-
-    return IntHandleFactoryAdaptor(int_factory, write_handle_construct, write_handle_destroy)
+    return IntHandleFactoryAdaptor(int_factory=int_factory,
+                                   handle_constructor=partial(construct_fd_handle_from_int, handle_type),
+                                   int_getter=get_int_from_fd_handle)
 
 
 def _make_no_handle_factory():
