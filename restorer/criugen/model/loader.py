@@ -75,8 +75,8 @@ def _parse_one_pipe_file(entry):
 def _parse_one_vma(e):
     return crdata.VmArea(
         resource_id=next_resource_id(),
-        start=e['start'],
-        end=e['end'],
+        start=int(e['start'], 16),
+        end=int(e['end'], 16),
         pgoff=e['pgoff'],
         shmid=int(e['shmid']),
         prot=set([s.strip() for s in e['prot'].split("|")]),

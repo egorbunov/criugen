@@ -106,8 +106,8 @@ class VmArea(Resource):
     """
     Virtual memory area
     """
-    start = """start address of VM area"""
-    end = """end address of VM area"""
+    start = """start address of VM area"""  # type: int
+    end = """end address of VM area"""  # type: int
     pgoff = """mapping offset (in file) in pages"""
     shmid = """file id in case VMA is not anon, 0 otherwise"""  # TODO: investigate
     prot = """protection flags"""
