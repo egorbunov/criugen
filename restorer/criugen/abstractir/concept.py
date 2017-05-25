@@ -1,3 +1,6 @@
+""" Functions, which sum up process tree model (concept) creation
+"""
+
 import model.crdata as crdata
 from pstree import ProcessTreeConcept
 from process_concept import ProcessConcept

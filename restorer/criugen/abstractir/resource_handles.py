@@ -18,7 +18,7 @@ ANY_FILE_DESCRIPTOR = FileDescriptor(-1)
 NO_HANDLE = None
 
 # Handle to input side of the pipe
-PipeInputHandle = collections.namedtuple("PipeInputHandle", ["fd"])
+PipeWriteHandle = collections.namedtuple("PipeWriteHandle", ["fd"])
 
 # Handle to output side of the pipe
-PipeOutputHandle = collections.namedtuple("PipeOutputHandle", ["fd"])
+PipeReadHandle = collections.namedtuple("PipeReadHandle", ["fd"])

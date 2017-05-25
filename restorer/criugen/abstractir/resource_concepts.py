@@ -1,3 +1,9 @@
+""" Here we put process tree resources "concepts" classes. The word concept was chosen not only
+because I like it, but also to emphasise that these classes describe conceptual and common 
+behaviour of all process tree resources; That is "high" level resource description without
+any specific resource details.
+"""
+
 from abc import ABCMeta, abstractproperty
 import resource_handles
 import model.crdata as crdata
@@ -71,8 +77,12 @@ class ResourceConcept(object):
 
     @abstractproperty
     def handle_types(self):
-        """
-        :return: array of handle types, which are created during resource creation
+        """ Be sure to make all handle types distinct, because out model
+        is made so multi-handle resources (like pipe) must have distinct by type
+        handles (that is not about possibility to point to resource with many handles
+        in one process)
+        
+        :return: set of handle types, which are created during resource creation
         :rtype: frozenset[type]
         """
 
@@ -162,7 +172,7 @@ class PipeConcept(ResourceConcept):
 
     @property
     def handle_types(self):
-        return frozenset([resource_handles.PipeInputHandle, resource_handles.PipeOutputHandle])
+        return frozenset([resource_handles.PipeWriteHandle, resource_handles.PipeReadHandle])
 
     @property
     def is_inherited(self):
