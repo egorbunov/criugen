@@ -5,7 +5,7 @@ within one process. That is why we introduce handle factories for different type
 in this file.
 """
 
-from abc import ABCMeta, abstractproperty, abstractmethod
+from abc import ABCMeta, abstractmethod
 import sys
 
 from resource_handles import *
@@ -16,7 +16,8 @@ class HandleFactory(object):
 
     @abstractmethod
     def get_free_handle(self):
-        """ Returns free handle
+        """ Returns free handle, i.e. just peeks it, not consumes and marks as
+        used
         """
 
     @abstractmethod
@@ -25,10 +26,6 @@ class HandleFactory(object):
         be marked as used. This handle can't be returned by 
         'get_free_handle` method after that operation
         """
-
-
-# TODO: remove comment below
-
 
 
 class IntBasedHandleFactory(HandleFactory):
@@ -42,27 +39,36 @@ class IntBasedHandleFactory(HandleFactory):
         from 
         """
 
+        self._used_handles = set()  # type: set[int]
+        self._top_unused = 0
         self._max_value = max_value
-        self._last_unused = 0
 
     def get_free_handle(self):
-        if self._last_unused >= self._max_value:
+        if self._top_unused >= self._max_value:
             raise IntHandleFactoryLimitReached(self._max_value)
 
-        new_handle = self._last_unused
-        self._last_unused += 1
-        return new_handle
+        return self._top_unused
 
     def mark_handle_as_used(self, handle):
+        if handle in self._used_handles:
+            raise HandleAlreadyUsedError(handle)
+
         if handle >= self._max_value:
             raise IntHandleFactoryLimitReached(self._max_value)
 
-        self._last_unused = handle + 1
+        self._used_handles.add(handle)
+        if self._top_unused < handle + 1:
+            self._top_unused = handle + 1
 
 
 class IntHandleFactoryLimitReached(Exception):
     def __init__(self, limit):
         super(IntHandleFactoryLimitReached, self).__init__("{}".format(limit))
+
+
+class HandleAlreadyUsedError(Exception):
+    def __init__(self, handle):
+        super(HandleAlreadyUsedError, self).__init__("{}".format(handle))
 
 
 class IntHandleFactoryAdaptor(HandleFactory):

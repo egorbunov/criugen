@@ -35,9 +35,25 @@ class ProcessConcept(object):
     def add_resource(self, resource, handle):
         self._resources.setdefault(resource, set()).add(handle)
 
+        # mark handle as used within process
+        self._set_handle_is_used(handle)
+
     def add_tmp_resource(self, resource, handle):
         self._tmp_resources.setdefault(resource, set()).add(handle)
         self.add_resource(resource, handle)
+
+    def add_tmp_resource_with_auto_handle(self, resource, handle_type):
+        """ Adds temporary resource just as add_tmp_resource does, but
+        it automatically generates valid handle for given resource of
+        a given type
+        
+        :param resource: resource to add
+        :type resource: ResourceConcept
+        :param handle_type: handle type to generate
+        :type handle_type: type
+        """
+        automatic_handle = self._get_next_handle_of_type(handle_type)
+        self.add_tmp_resource(resource, automatic_handle)
 
     def get_resources(self):
         """ 
@@ -57,3 +73,11 @@ class ProcessConcept(object):
 
     def get_tmp_handles(self, resource):
         return self._tmp_resources.get(resource, set())
+
+    def _set_handle_is_used(self, handle):
+        handle_factory = self._handle_factories[type(handle)]
+        handle_factory.mark_handle_as_used(handle)
+
+    def _get_next_handle_of_type(self, handle_type):
+        handle_factory = self._handle_factories[handle_type]
+        return handle_factory.get_free_handle()
