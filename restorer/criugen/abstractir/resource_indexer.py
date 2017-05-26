@@ -19,10 +19,19 @@ class ResourcesIndexer(ProcessResourceListener):
 
     @property
     def all_resources(self):
+        """
+        :rtype: list[ResourceConcept] 
+        """
         return self._resource_holders_map.keys()
 
     def get_resource_holders(self, resource):
+        """
+        :rtype: list[ProcessConcept] 
+        """
         return self._resource_holders_map.get(resource, [])
 
     def get_resource_handle_holders(self, resource, handle):
+        """
+        :rtype: list[ProcessConcept] 
+        """
         return self._resource_handle_holders_map.get((resource, handle))
