@@ -51,7 +51,7 @@ def _init_vmas_one_process(process_concept, vmas, shmem_map, regfile_map):
 
         resource = VMAConcept(vma)
         if file_dependency:
-            resource.add_dependency(file_dependency)
+            resource.add_dependency(file_dependency, resource_handles.FileDescriptor)
 
         process_concept.add_final_resource(resource, resource_handles.NO_HANDLE)
 

@@ -43,8 +43,15 @@ class ResourceConcept(object):
         """
         return self._payload
 
-    def add_dependency(self, resource):
-        self._dependencies.append(resource)
+    def add_dependency(self, resource, handle_type):
+        """ Adds dependency of the resource. So in our model resource may
+        depend on other resource with specifically typed handle to it. For example
+        VMA may depend on (file, FileDescriptor). That is it for now.
+        
+        :param resource: dependency resource 
+        :param handle_type: required dependency resource handle type
+        """
+        self._dependencies.append((resource, handle_type))
 
     @property
     def dependencies(self):
