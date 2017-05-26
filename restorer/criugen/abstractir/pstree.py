@@ -70,7 +70,7 @@ class ProcessTreeConcept(object):
         :return: list of children processes for given process
         :rtype: list[ProcessConcept]
         """
-        return self._proc_children(proc)
+        return self._proc_children[proc.pid]
 
     def proc_parent(self, proc):
         """
