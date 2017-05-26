@@ -43,3 +43,9 @@ class ResourcesIndexer(ProcessResourceListener):
         :rtype: list[ProcessConcept] 
         """
         return self._resource_handle_holders_map.get((resource, handle))
+
+    def get_possible_resource_handles(self, resource):
+        """ Returns a set of all handles, which point to the resource
+        in some processes
+        """
+        return set(h for (r, h) in self._resource_handle_holders_map if r == resource)

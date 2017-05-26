@@ -2,6 +2,7 @@ from process_concept import ProcessConcept
 from resource_indexer import ResourcesIndexer
 import util
 
+
 class ProcessTreeConcept(object):
     """
     Process tree built from processes list
@@ -20,21 +21,14 @@ class ProcessTreeConcept(object):
         roots = util.find_processes_roots(processes)
         if len(roots) != 1:
             raise RuntimeError("Processes do not form a tree!")
+
         self._root = roots[0]
         self._proc_map = {p.pid: p for p in processes}
+        self._proc_children = self._construct_children_map()
+        self._proc_depths_map = self._calc_process_depths()
 
-        def children_construct(acc, p):
-            if p.ppid not in acc:
-                acc[p.ppid] = []
-            acc[p.ppid].append(p)
-            if p.pid not in acc:
-                acc[p.pid] = []
-            return acc
-
-        self._proc_children = reduce(children_construct, self._processes, {})
-
+        # creating resource indexer to store resources index
         self._resource_indexer = ResourcesIndexer()
-        # filling index
         for p in self._processes:
             for r in p.iter_all_resources():
                 for h in p.iter_all_handles(r):
@@ -96,6 +90,9 @@ class ProcessTreeConcept(object):
         """
         return self._proc_map[pid]
 
+    def process_depth(self, process):
+        return self._proc_depths_map[process]
+
     def dfs(self, pre_visit=util.noop_fun, post_visit=util.noop_fun):
         """ Performs DFS on process tree with given pre visiting function
         and post visiting function
@@ -112,3 +109,27 @@ class ProcessTreeConcept(object):
         for child in self.proc_children(cur):
             self._dfs(child, pre_visit, post_visit)
         post_visit(cur)
+
+    def _construct_children_map(self):
+        def children_construct(acc, p):
+            if p.ppid not in acc:
+                acc[p.ppid] = []
+            acc[p.ppid].append(p)
+            if p.pid not in acc:
+                acc[p.pid] = []
+            return acc
+
+        return reduce(children_construct, self._processes, {})
+
+    def _calc_process_depths(self):
+        # calculating process depths
+        process_depths_map = {}  # type: dict[ProcessConcept, int]
+
+        def calc_node_depth(p):
+            if p == self._root:
+                process_depths_map[p] = 0
+            else:
+                process_depths_map[p] = process_depths_map[self.proc_parent(p)] + 1
+
+        self.dfs(pre_visit=calc_node_depth)
+        return process_depths_map

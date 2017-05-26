@@ -8,6 +8,7 @@
 from pstree import ProcessTreeConcept
 from resource_concepts import ResourceConcept
 import util
+import creators
 
 
 def perform_process_tree_closure(process_tree):
@@ -43,9 +44,10 @@ def _close_against_dependencies_one_process(process):
         next_to_check = set()
 
         for r in resources_to_check:
-            not_in_process = set(d for d in r.dependencies if not process.has_resource(d))
-            for d in not_in_process:
-                process.add_tmp_resource_with_auto_handle(d)
+            not_in_process = set((dep_r, handle_type) for (dep_r, handle_type) in r.dependencies
+                                 if not process.has_resource(dep_r))
+            for (d, h) in not_in_process:
+                process.add_tmp_resource_with_auto_handle(d, h)
             next_to_check |= not_in_process
 
         resources_to_check = next_to_check
@@ -63,30 +65,17 @@ def _close_against_inheritance(process_tree):
     resource_indexer = process_tree.resource_indexer
     all_resources_and_handles = resource_indexer.all_resources_handles
 
-    # for this procedure we need to know depths of the processes
-    # in the process tree
-    process_depths_map = {}  # type: dict[ProcessConcept, int]
-
-    def calc_node_depth(p):
-        if p == process_tree.root_process:
-            process_depths_map[p] = 0
-        else:
-            process_depths_map[p] = process_depths_map[process_tree.proc_parent(p)] + 1
-
-    process_tree.dfs(pre_visit=process_depths_map)
-
     for (r, h) in all_resources_and_handles:
         if r.is_sharable or not r.is_inherited:
             # inheritance sharing can be avoided
             continue
         holders = resource_indexer.get_resource_handle_holders(r, h)
-        _close_forest_against_resource(process_tree, process_depths_map, holders, r, h)
+        _close_forest_against_inheritable_resource(process_tree, holders, r, h)
 
 
-def _close_forest_against_resource(process_tree, process_depths_map, forest, r, h):
+def _close_forest_against_inheritable_resource(process_tree, forest, r, h):
     """
     :type process_tree: ProcessTreeConcept
-    :param process_depths_map: map from process to depth of that process in the tree
     :param forest: list of processes, which share (r, h)
     :type forest: list[ProcessConcept]
     :param r: resource, which can be shared only at fork (via inheritance)
@@ -97,10 +86,9 @@ def _close_forest_against_resource(process_tree, process_depths_map, forest, r, 
     roots = util.find_processes_roots(forest)
 
     # the topmost process in the forest, he will create the resource
-    root = max(roots, key=lambda p: -process_depths_map[p])
+    root = max(roots, key=lambda p: -process_tree.process_depth(p))
 
-    # after that cycle resource (r, h) holders must form
-    # a tree
+    # after that cycle resource (r, h) holders must form a tree
     for p in roots:
         if p == root:
             continue
@@ -113,11 +101,21 @@ def _close_forest_against_resource(process_tree, process_depths_map, forest, r, 
 
 def _close_against_multi_handle_resources(process_tree):
     """ Ensures, that process, which is responsible for creation of sharable
-    multi-handle resource has all "parts" of that resource.
+    multi-handle resource has all "parts" of that resource
     
     :param process_tree: process tree
     :type process_tree: ProcessTreeConcept
     """
 
     resource_indexer = process_tree.resource_indexer
-    # all_resources =
+    multi_handle_resources = (r for r in resource_indexer.all_resources if len(r.handle_types) > 1)
+
+    for r in multi_handle_resources:
+        absent_handle_types = set(r.handle_types)
+        creator = creators.get_resource_creator(process_tree, r)
+
+        for h in creator.iter_all_handles():
+            absent_handle_types.remove(h)
+
+        for absent_h in absent_handle_types:
+            creator.add_tmp_resource_with_auto_handle(r, absent_h)
