@@ -48,7 +48,7 @@ def _close_against_dependencies_one_process(process):
                                  if not process.has_resource(dep_r))
             for (d, h) in not_in_process:
                 process.add_tmp_resource_with_auto_handle(d, h)
-            next_to_check |= not_in_process
+            next_to_check |= set(r for r, h in not_in_process)  # TODO: maybe make it more efficient
 
         resources_to_check = next_to_check
 

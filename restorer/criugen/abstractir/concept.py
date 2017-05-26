@@ -22,7 +22,7 @@ def init_conceptual_process_tree(app):
     :param app: read from dump application object
     :type app: crdata.Application
     :return: conceptual process tree and resource index
-    :rtype: (ProcessTreeConcept, ResourcesIndexer)
+    :rtype: ProcessTreeConcept
     """
 
     process_tree = _make_empty_conceptual_process_tree(app)

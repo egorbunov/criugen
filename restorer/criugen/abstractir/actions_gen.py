@@ -16,5 +16,6 @@ def generate_actions(application):
     """
 
     process_tree = concept.init_conceptual_process_tree(application)
+    closure.perform_process_tree_closure(process_tree)
 
     return []
