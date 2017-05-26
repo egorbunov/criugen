@@ -105,7 +105,7 @@ def init_pipe_resources(process_tree, app):
             else:
                 raise RuntimeError("Unknown pipe file")
 
-            process_concept.add_resource(pipe_concept, handle=handle)
+            process_concept.add_final_resource(pipe_concept, handle=handle)
 
     return list(pipe_concepts.values())
 
@@ -129,4 +129,4 @@ def _init_files_common(process_tree, files, app):
                 continue
 
             # adding file with file descriptor as (resource, handle) pair
-            process_concept.add_resource(files[file_id], FileDescriptor(fd))
+            process_concept.add_final_resource(files[file_id], FileDescriptor(fd))

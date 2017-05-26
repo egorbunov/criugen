@@ -53,7 +53,7 @@ def _init_vmas_one_process(process_concept, vmas, shmem_map, regfile_map):
         if file_dependency:
             resource.add_dependency(file_dependency)
 
-        process_concept.add_resource(resource, resource_handles.NO_HANDLE)
+        process_concept.add_final_resource(resource, resource_handles.NO_HANDLE)
 
 
 def init_private_vma_resources(process_tree, app, regfile_map):

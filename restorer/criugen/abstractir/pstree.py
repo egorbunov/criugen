@@ -14,7 +14,7 @@ class ProcessTreeConcept(object):
         :type processes: list[ProcessConcept]
         """
         super(ProcessTreeConcept, self).__init__()
-        self._processes = processes
+        self._processes = sorted(processes, key=lambda p: p.pid)
         self._root = root if root else next(p for p in processes if p.ppid == 0)
         self._proc_map = {p.pid: p for p in processes}
 
@@ -30,8 +30,14 @@ class ProcessTreeConcept(object):
 
     @property
     def processes(self):
-        """
+        """ Processes, sorted by pid
         :rtype: list[ProcessConcept] 
+        """
+        return self._processes
+
+    @property
+    def sorted_processes(self):
+        """ Same as processes, but implicitly `sorted` =)        
         """
         return self._processes
 

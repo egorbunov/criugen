@@ -26,7 +26,7 @@ def init_groups_resource(process_tree, app):
     for p in raw_processes:
         process_concept = process_tree.proc_by_pid(p.pid)
         group_concept = groups.setdefault(p.ppid, ProcessGroupConcept(p.ppid))
-        process_concept.add_resource(group_concept, handle=NO_HANDLE)
+        process_concept.add_final_resource(group_concept, handle=NO_HANDLE)
 
     return groups
 
@@ -48,6 +48,6 @@ def init_sessions_resource(process_tree, app):
     for p in raw_processes:
         process_concept = process_tree.proc_by_pid(p.pid)
         session_concept = sessions.setdefault(p.ppid, ProcessSessionConcept(p.sid))
-        process_concept.add_resource(session_concept, handle=NO_HANDLE)
+        process_concept.add_final_resource(session_concept, handle=NO_HANDLE)
 
     return sessions
