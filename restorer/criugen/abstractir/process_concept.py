@@ -1,7 +1,7 @@
 from resource_concepts import ResourceConcept
 from handle_factory import make_handle_factories_map_for_process, HandleFactory
 from itertools import chain
-from resource_index import ProcessResourceListener
+from resource_listener import ProcessResourceListener
 
 
 class ProcessConcept(object):
@@ -10,7 +10,7 @@ class ProcessConcept(object):
     one particular process
     """
 
-    def __init__(self, pid, parent_pid, resource_index=None):
+    def __init__(self, pid, parent_pid):
         """ For now pid and parent pid are not treated as resources:
         1) we need them to build process tree
         2) these id's can't change in linux processes environment,
@@ -18,9 +18,6 @@ class ProcessConcept(object):
 
         :param pid: process id 
         :param parent_pid: process parent id
-        :param resource_index: listener, which is called in case 
-               new resource added to the process
-        :type resource_index: ProcessResourceListener
         """
 
         self._pid = pid
@@ -28,7 +25,18 @@ class ProcessConcept(object):
         self._final_resources = {}  # dict from resource to handle array
         self._tmp_resources = {}  # same as _final_resources, but temporary
         self._handle_factories = make_handle_factories_map_for_process()  # type: dict[type, HandleFactory]
-        self._resource_index = resource_index
+        self._resource_listeners = []
+
+    def add_resource_listener(self, resource_listener):
+        """
+        :param resource_listener: listener, which is called in case 
+               new resources added to the process
+        :type resource_listener: ProcessResourceListener
+        """
+        self._resource_listeners.append(resource_listener)
+
+    def remove_resource_listener(self, resource_listener):
+        self._resource_listeners.remove(resource_listener)
 
     @property
     def pid(self):
@@ -61,27 +69,25 @@ class ProcessConcept(object):
         automatic_handle = self._get_next_handle_of_type(handle_type)
         self.add_tmp_resource(resource, automatic_handle)
 
-    def get_final_resources(self):
-        """ 
-        :return: all resources, including temporary
-        :rtype: iterable[ResourceConcept]
-        """
-        return self._final_resources.keys()
-
-    def get_tmp_resources(self):
-        """
-        :rtype: iterable[ResourceConcept]
-        """
-        return self._tmp_resources.keys()
-
     def iter_all_resources(self):
         return chain(self._final_resources.iterkeys(), self._tmp_resources.iterkeys())
 
-    def get_handles(self, resource):
+    def get_final_handles(self, resource):
+        """ Returns list of handles, so each handle `h` from this
+        list: (`h`, resource) must be in the target process state after
+        restoration process
+        """
         return self._final_resources.get(resource, set())
 
     def get_tmp_handles(self, resource):
+        """ Returns list of handles, so each handle `h` from this
+        list: (`h`, resource) must NOT be in the target process state after
+        restoration process, i.e. (`h`, resource) is temporary pair
+        """
         return self._tmp_resources.get(resource, set())
+
+    def iter_all_handles(self, resource):
+        return chain(self.get_final_handles(resource), self.get_tmp_handles(resource))
 
     def has_resource(self, resource):
         return resource in self._final_resources or resource in self._tmp_resources
@@ -109,6 +115,7 @@ class ProcessConcept(object):
         dct.setdefault(resource, set()).add(handle)
         # mark handle as used within process
         self._set_handle_is_used(handle)
-        # call resource indexer-listener
-        if self._resource_index:
-            self._resource_index.on_proc_add_resource(self, resource, handle)
+
+        # call resource add listener
+        for rl in self._resource_listeners:
+            rl.on_proc_add_resource(self, resource, handle)

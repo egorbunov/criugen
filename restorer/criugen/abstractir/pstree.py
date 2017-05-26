@@ -1,4 +1,5 @@
 from process_concept import ProcessConcept
+from resource_indexer import ResourcesIndexer
 
 
 class ProcessTreeConcept(object):
@@ -27,6 +28,23 @@ class ProcessTreeConcept(object):
             return acc
 
         self._proc_children = reduce(children_construct, self._processes, {})
+
+        self._resource_indexer = ResourcesIndexer()
+        # filling index
+        for p in self._processes:
+            for r in p.iter_all_resources():
+                for h in p.iter_all_handles(r):
+                    self._resource_indexer.on_proc_add_resource(p, r, h)
+
+
+    @property
+    def resource_indexer(self):
+        """
+        Return resource indexer object, which indexes all resource in all
+        processes from process tree
+        :rtype: ResourcesIndexer
+        """
+        return self._resource_indexer
 
     @property
     def processes(self):

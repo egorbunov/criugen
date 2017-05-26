@@ -9,16 +9,20 @@ import p_files
 import p_private
 import p_vmas
 import p_ids
+from resource_indexer import ResourcesIndexer
 
 
-def _init_conceptual_process_tree(app):
+def init_conceptual_process_tree(app):
     """ Reads application resources and initializes conceptual
-    processes and resources from them
+    processes and resources from them. Returns a pair:
+    * process tree, which contains of processes models (concepts) filled 
+     with(resource, handle) pairs
+    * resource indexer, with all initial application resources indexed
     
     :param app: read from dump application object
     :type app: crdata.Application
-    :return: conceptual process tree
-    :rtype: ProcessTreeConcept
+    :return: conceptual process tree and resource index
+    :rtype: (ProcessTreeConcept, ResourcesIndexer)
     """
 
     process_tree = _make_empty_conceptual_process_tree(app)
