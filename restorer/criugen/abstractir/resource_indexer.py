@@ -24,6 +24,14 @@ class ResourcesIndexer(ProcessResourceListener):
         """
         return self._resource_holders_map.keys()
 
+    @property
+    def all_resources_handles(self):
+        """ Returns all pairs (resource, handle), which
+        are added to the indexer
+        :rtype: list[(ResourceConcept, object)]
+        """
+        return self._resource_handle_holders_map.keys()
+
     def get_resource_holders(self, resource):
         """
         :rtype: list[ProcessConcept] 

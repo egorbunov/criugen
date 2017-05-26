@@ -67,6 +67,6 @@ def _make_empty_conceptual_process_tree(app):
         raise RuntimeError("Application must contain only one process tree; found {}".format(len(roots)))
 
     root = roots[0]
-    new_root = ProcessConcept(root.ppid, -1)
+    new_root = ProcessConcept(root.ppid, -1)  # zero process!
     conceptual_processes.append(new_root)
-    return ProcessTreeConcept(conceptual_processes, root=new_root)
+    return ProcessTreeConcept(conceptual_processes)

@@ -92,6 +92,13 @@ class ProcessConcept(object):
     def has_resource(self, resource):
         return resource in self._final_resources or resource in self._tmp_resources
 
+    def has_resource_at_handle(self, resource, handle):
+        for h in self.iter_all_handles(resource):
+            if h == handle:
+                return True
+        return False
+
+
     def is_tmp_resource(self, resource):
         return resource in self._tmp_resources
 

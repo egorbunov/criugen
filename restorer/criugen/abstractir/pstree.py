@@ -1,13 +1,13 @@
 from process_concept import ProcessConcept
 from resource_indexer import ResourcesIndexer
-
+import util
 
 class ProcessTreeConcept(object):
     """
     Process tree built from processes list
     """
 
-    def __init__(self, processes, root=None):
+    def __init__(self, processes):
         """ Builds process tree
         :param processes: list of objects with `pid` and `ppid` properties
         :param root: process tree root; if not specified, process with zero
@@ -16,7 +16,11 @@ class ProcessTreeConcept(object):
         """
         super(ProcessTreeConcept, self).__init__()
         self._processes = sorted(processes, key=lambda p: p.pid)
-        self._root = root if root else next(p for p in processes if p.ppid == 0)
+
+        roots = util.find_processes_roots(processes)
+        if len(roots) != 1:
+            raise RuntimeError("Processes do not form a tree!")
+        self._root = roots[0]
         self._proc_map = {p.pid: p for p in processes}
 
         def children_construct(acc, p):
@@ -35,7 +39,6 @@ class ProcessTreeConcept(object):
             for r in p.iter_all_resources():
                 for h in p.iter_all_handles(r):
                     self._resource_indexer.on_proc_add_resource(p, r, h)
-
 
     @property
     def resource_indexer(self):
@@ -92,3 +95,20 @@ class ProcessTreeConcept(object):
         :rtype: ProcessConcept
         """
         return self._proc_map[pid]
+
+    def dfs(self, pre_visit=util.noop_fun, post_visit=util.noop_fun):
+        """ Performs DFS on process tree with given pre visiting function
+        and post visiting function
+        
+        :param pre_visit: function, which takes one parameter: current process node,
+               and invoked before visiting that node children
+        :param post_visit: function, which takes one parameter: current process node,
+               and invoked after visiting that node children
+        """
+        self._dfs(self._root, pre_visit, post_visit)
+
+    def _dfs(self, cur, pre_visit, post_visit):
+        pre_visit(cur)
+        for child in self.proc_children(cur):
+            self._dfs(child, pre_visit, post_visit)
+        post_visit(cur)
