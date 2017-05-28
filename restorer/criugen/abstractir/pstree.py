@@ -104,6 +104,24 @@ class ProcessTreeConcept(object):
         """
         self._dfs(self._root, pre_visit, post_visit)
 
+    def lca(self, proc_a, proc_b):
+        """ simplest lca implementation; do not need something
+        super efficient for now
+        """
+
+        # proc_a is lower in the tree
+        if self.process_depth(proc_b) > self.process_depth(proc_a):
+            proc_a, proc_b = proc_b, proc_a
+
+        while self.process_depth(proc_a) != self.process_depth(proc_b):
+            proc_a = self.proc_parent(proc_a)
+
+        while proc_a != proc_b:
+            proc_a = self.proc_parent(proc_a)
+            proc_b = self.proc_parent(proc_b)
+
+        return proc_a
+
     def _dfs(self, cur, pre_visit, post_visit):
         pre_visit(cur)
         for child in self.proc_children(cur):

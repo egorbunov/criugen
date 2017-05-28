@@ -26,28 +26,38 @@ def perform_process_tree_closure(process_tree):
 
 
 def _close_against_dependencies(process_tree):
-    """ For each resource `r` in each process `P` from given tree,
-    adds resources, which are needed for `r` creation if they
-    are not handled by `P`.
+    """ Makes sure, that processes, which are responsible
+     for resource creation of the resource `r` also have
+     handle to all dependencies of this resource
     
     :param process_tree: process tree
     :type process_tree: ProcessTreeConcept
     """
-    for process in process_tree.processes:
-        _close_against_dependencies_one_process(process)
+
+    resource_indexer = process_tree.resource_indexer
+    all_resources = resource_indexer.all_resources
+
+    for r in all_resources:
+        creator = creators.get_resource_creator(process_tree, r)
+        _close_against_dependencies_one_creator(creator, r)
 
 
-def _close_against_dependencies_one_process(process):
-    resources_to_check = set(process.iter_all_resources())  # type: set[ResourceConcept]
+def _close_against_dependencies_one_creator(creator_process, resource):
+    resources_to_check = {resource}  # type: set[ResourceConcept]
 
     while len(resources_to_check) > 0:
         next_to_check = set()
 
         for r in resources_to_check:
+            # retrieving dependencies, which are not handled by creator
             not_in_process = set((dep_r, handle_type) for (dep_r, handle_type) in r.dependencies
-                                 if not process.has_resource(dep_r))
-            for (d, h) in not_in_process:
-                process.add_tmp_resource_with_auto_handle(d, h)
+                                 if not creator_process.has_resource_at_handle_type(dep_r, handle_type))
+
+            # adding those dependencies if needed
+            for (d, handle_type) in not_in_process:
+                creator_process.add_tmp_resource_with_auto_handle(d, handle_type)
+
+            # now we need to check dependencies of those dependencies!
             next_to_check |= set(r for r, h in not_in_process)  # TODO: maybe make it more efficient
 
         resources_to_check = next_to_check
@@ -74,29 +84,29 @@ def _close_against_inheritance(process_tree):
 
 
 def _close_forest_against_inheritable_resource(process_tree, forest, r, h):
-    """
+    """ Adds the resource to whole intermediate processes to complete the forest
+
     :type process_tree: ProcessTreeConcept
     :param forest: list of processes, which share (r, h)
     :type forest: list[ProcessConcept]
     :param r: resource, which can be shared only at fork (via inheritance)
-    :type r: ProcessTreeConcept
+    :type r: ResourceConcept
     :param h: handle to the resource
     """
 
+    creator = creators.get_resource_creator(process_tree, r)
     roots = util.find_processes_roots(forest)
 
-    # the topmost process in the forest, he will create the resource
-    root = max(roots, key=lambda p: -process_tree.process_depth(p))
+    if not creator.has_resource_at_handle(r, h):
+        creator.add_tmp_resource(r, h)
 
-    # after that cycle resource (r, h) holders must form a tree
-    for p in roots:
-        if p == root:
+    for root in roots:
+        if root == creator:
             continue
 
-        cur_p = process_tree.proc_parent(p)
-        while not cur_p.has_resource_at_handle(r, h):
-            cur_p.add_tmp_resource(r, h)
-            cur_p = process_tree.proc_parent(cur_p)
+        parent = process_tree.proc_parent(root)
+        while not parent.has_resource_at_handle(r, h):
+            parent.add_tmp_resource(r, h)
 
 
 def _close_against_multi_handle_resources(process_tree):
@@ -119,3 +129,18 @@ def _close_against_multi_handle_resources(process_tree):
 
         for absent_h in absent_handle_types:
             creator.add_tmp_resource_with_auto_handle(r, absent_h)
+
+
+def _make_creators_handle_the_resource_they_create(process_tree):
+    resource_indexer = process_tree.resource_indexer
+    all_resources = resource_indexer.all_resources
+
+    # inherited resource creators are handled in _close_against_inheritance function
+    sharable_resource = (r for r in all_resources if r.is_sharable)
+    for r in sharable_resource:
+        creator = creators.get_resource_creator(process_tree, r)
+        for ht in r.handle_types:
+            if creator.has_resource_at_handle_type(r, ht):
+                continue
+
+            creator.add_tmp_resource_with_auto_handle(r, ht)

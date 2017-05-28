@@ -4,10 +4,12 @@ behaviour of all process tree resources; That is "high" level resource descripti
 any specific resource details.
 """
 
-from abc import ABCMeta, abstractproperty
+from abc import ABCMeta, abstractproperty, abstractmethod
 import resource_handles
 import model.crdata as crdata
 import resource_adapters
+from process_concept import ProcessConcept
+from trivial_resources import *
 
 
 class WrongResourceConceptPayload(Exception):
@@ -65,7 +67,7 @@ class ResourceConcept(object):
         :return: type of stored payload or tuple of possible stored types
         """
         return object
-    
+
     @abstractproperty
     def is_inherited(self):
         """
@@ -93,6 +95,14 @@ class ResourceConcept(object):
         :rtype: frozenset[type]
         """
 
+    @abstractmethod
+    def possible_creators(self, processes):
+        """ Filters given processes list and returns only those, who
+        can create this resource (can be it's creator)
+
+        :type processes: list[ProcessConcept]
+        """
+
 
 class RegularFileConcept(ResourceConcept):
     @property
@@ -110,6 +120,10 @@ class RegularFileConcept(ResourceConcept):
     @property
     def is_inherited(self):
         return True
+
+    def possible_creators(self, processes):
+        # every process can open a file =)
+        return processes
 
 
 class SharedMemConcept(ResourceConcept):
@@ -129,18 +143,21 @@ class SharedMemConcept(ResourceConcept):
     def is_inherited(self):
         return True
 
+    def possible_creators(self, processes):
+        return processes
+
 
 class ProcessGroupConcept(ResourceConcept):
     @property
     def payload_type(self):
         """
-        group resource is represented as a group id via integer 
+        group resource type represented by id type
         """
-        return int
+        return GroupId
 
     @property
     def handle_types(self):
-        return frozenset([resource_handles.GroupId])
+        return frozenset([type(resource_handles.NO_HANDLE)])
 
     @property
     def is_sharable(self):
@@ -150,18 +167,24 @@ class ProcessGroupConcept(ResourceConcept):
     def is_inherited(self):
         return True
 
+    def possible_creators(self, processes):
+        # process group with special id can be created only
+        # by process with pid == group id
+        group_id = self.payload  # type: GroupId
+        return [p for p in processes if p.pid == group_id]
+
 
 class ProcessSessionConcept(ResourceConcept):
     @property
     def payload_type(self):
         """
-        session resource payload is represented as a session id via integer 
+        session resource type represented by id type
         """
-        return int
+        return SessionId
 
     @property
     def handle_types(self):
-        return frozenset([resource_handles.SessionId])
+        return frozenset([type(resource_handles.NO_HANDLE)])
 
     @property
     def is_sharable(self):
@@ -170,6 +193,12 @@ class ProcessSessionConcept(ResourceConcept):
     @property
     def is_inherited(self):
         return True
+
+    def possible_creators(self, processes):
+        # session with special id can be created only
+        # by process with pid equal to that id
+        session_id = self.payload  # type: SessionId
+        return [p for p in processes if p.pid == session_id]
 
 
 class PipeConcept(ResourceConcept):
@@ -189,6 +218,9 @@ class PipeConcept(ResourceConcept):
     def is_sharable(self):
         return True
 
+    def possible_creators(self, processes):
+        return processes
+
 
 class VMAConcept(ResourceConcept):
     """ Virtual memory area concept
@@ -200,7 +232,7 @@ class VMAConcept(ResourceConcept):
 
     @property
     def handle_types(self):
-        return frozenset([resource_handles.NO_HANDLE])
+        return frozenset([type(resource_handles.NO_HANDLE)])
 
     @property
     def is_inherited(self):
@@ -209,6 +241,9 @@ class VMAConcept(ResourceConcept):
     @property
     def is_sharable(self):
         return False
+
+    def possible_creators(self, processes):
+        return processes
 
 
 class FSPropsConcept(ResourceConcept):
@@ -222,7 +257,7 @@ class FSPropsConcept(ResourceConcept):
 
     @property
     def handle_types(self):
-        return frozenset([resource_handles.NO_HANDLE])
+        return frozenset([type(resource_handles.NO_HANDLE)])
 
     @property
     def is_inherited(self):
@@ -231,6 +266,9 @@ class FSPropsConcept(ResourceConcept):
     @property
     def is_sharable(self):
         return False
+
+    def possible_creators(self, processes):
+        return processes
 
 
 class ProcessInternalsConcept(ResourceConcept):
@@ -243,7 +281,7 @@ class ProcessInternalsConcept(ResourceConcept):
 
     @property
     def handle_types(self):
-        return frozenset([resource_handles.NO_HANDLE])
+        return frozenset([type(resource_handles.NO_HANDLE)])
 
     @property
     def is_inherited(self):
@@ -252,3 +290,7 @@ class ProcessInternalsConcept(ResourceConcept):
     @property
     def is_sharable(self):
         return False
+
+    def possible_creators(self, processes):
+        # for now no restrictions and it seems to be ok
+        return processes

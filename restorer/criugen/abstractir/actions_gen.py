@@ -6,7 +6,7 @@ import concept
 import closure
 
 
-def generate_actions(application):
+def generate_actions_list(application):
     """ Generates list of abstract actions for given process
     tree restoration
     
