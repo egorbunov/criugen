@@ -21,7 +21,9 @@ def build_actions_graph(process_tree):
     :type process_tree: ProcessTreeConcept
     :return: actions graph
     """
-    pass
+
+    action_vertices = _build_actions_vertices(process_tree)
+    print(action_vertices)
 
 
 def _build_actions_vertices(process_tree):
@@ -65,7 +67,8 @@ def _gen_create_actions(process_tree):
         handles = creators.get_creator_handles(creator, r)
 
         if len(handles) != len(r.handle_types):
-            raise RuntimeError("Not enough handles for creation of [{}] by [{}]".format(r, creator))
+            raise RuntimeError("Not enough handles for creation of [{}] by [{}]; Have only: [{}]"
+                               .format(r, creator, handles))
 
         yield CreateResourceAction(process=creator, resource=r, handles=handles)
 
@@ -106,6 +109,10 @@ def _gen_remove_tmp_resources_actions(process_tree):
                 yield RemoveResourceAction(process=p,
                                            resource=tmp_resource,
                                            handle=tmp_handle)
+
+
+def _build_actions_index(actions):
+    pass
 
 
 def _build_precedence_edges(process_tree, actions_vertices):

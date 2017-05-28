@@ -20,6 +20,7 @@ def perform_process_tree_closure(process_tree):
     :param process_tree: process tree
     :type process_tree: ProcessTreeConcept
     """
+    # _make_creators_handle_the_resource_they_create(process_tree)
     _close_against_dependencies(process_tree)
     _close_against_inheritance(process_tree)
     _close_against_multi_handle_resources(process_tree)
@@ -124,11 +125,11 @@ def _close_against_multi_handle_resources(process_tree):
         absent_handle_types = set(r.handle_types)
         creator = creators.get_resource_creator(process_tree, r)
 
-        for h in creator.iter_all_handles():
-            absent_handle_types.remove(h)
+        for h in creator.iter_all_handles(r):
+            absent_handle_types.remove(type(h))
 
-        for absent_h in absent_handle_types:
-            creator.add_tmp_resource_with_auto_handle(r, absent_h)
+        for absent_h_t in absent_handle_types:
+            creator.add_tmp_resource_with_auto_handle(r, absent_h_t)
 
 
 def _make_creators_handle_the_resource_they_create(process_tree):

@@ -8,7 +8,7 @@ from abc import ABCMeta, abstractproperty, abstractmethod
 import resource_handles
 import model.crdata as crdata
 import resource_adapters
-from process_concept import ProcessConcept
+import process_concept
 from trivial_resources import *
 
 
@@ -100,7 +100,7 @@ class ResourceConcept(object):
         """ Filters given processes list and returns only those, who
         can create this resource (can be it's creator)
 
-        :type processes: list[ProcessConcept]
+        :type processes: list[process_concept.ProcessConcept]
         """
 
 

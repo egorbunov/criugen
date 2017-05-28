@@ -4,6 +4,7 @@
 import model.crdata as crdata
 import concept
 import closure
+import actions_graph
 
 
 def generate_actions_list(application):
@@ -17,5 +18,6 @@ def generate_actions_list(application):
 
     process_tree = concept.init_conceptual_process_tree(application)
     closure.perform_process_tree_closure(process_tree)
+    actions_graph.build_actions_graph(process_tree)
 
     return []

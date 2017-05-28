@@ -34,6 +34,9 @@ class ProcessTreeConcept(object):
                 for h in p.iter_all_handles(r):
                     self._resource_indexer.on_proc_add_resource(p, r, h)
 
+        for p in self._processes:
+            p.add_resource_listener(self._resource_indexer)
+
     @property
     def resource_indexer(self):
         """

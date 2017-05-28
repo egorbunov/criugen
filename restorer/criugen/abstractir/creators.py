@@ -40,7 +40,7 @@ def get_resource_creator(process_tree, resource):
 
     if resource.is_sharable:
         creator_candidates = set(holders) & all_create_candidates  # todo: optimize?
-        _sharable_resource_creator(creator_candidates, all_create_candidates, resource)
+        return _sharable_resource_creator(creator_candidates, all_create_candidates, resource)
 
     # not is_sharable already
     if resource.is_inherited:
