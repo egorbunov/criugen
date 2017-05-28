@@ -54,6 +54,11 @@ ANY_FILE_DESCRIPTOR = FileDescriptor(-1)
 # For resources, which don't need handle
 NO_HANDLE = None
 
+
+class __ImpossibleHandle(object):
+    pass
+IMPOSSIBLE_HANDLE = __ImpossibleHandle()
+
 # Handle to input side of the pipe
 PipeWriteHandle = collections.namedtuple("PipeWriteHandle", ["fd"])
 

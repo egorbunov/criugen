@@ -2,6 +2,7 @@ from pstree import ProcessTreeConcept
 from resource_concepts import ResourceConcept
 from process_concept import ProcessConcept
 import util
+import resource_handles
 
 
 def get_resource_creator(process_tree, resource):
@@ -52,6 +53,31 @@ def get_resource_creator(process_tree, resource):
     if len(holders) != 1:
         raise RuntimeError("Private resource [{}] has more than one holder".format(resource))
     return holders[0]
+
+
+def get_creator_handles(process, resource):
+    """ Returns array of handles for the resource, which are used during creation
+    of the resource by the process
+
+    :type process: ProcessConcept
+    :type resource: ResourceConcept
+    :rtype: list[object]
+    """
+
+    return list(_gen_creator_handles(process, resource))
+
+
+def _gen_creator_handles(process, resource):
+    """
+    :type process: ProcessConcept
+    :type resource: ResourceConcept
+    :rtype: list[object]
+    """
+    for ht in resource.handle_types:
+        h = next(process.get_all_handles_of_type(resource, ht), resource_handles.IMPOSSIBLE_HANDLE)
+        if h == resource_handles.IMPOSSIBLE_HANDLE:
+            continue
+        yield h
 
 
 class ImpossibleToCreateResource(Exception):

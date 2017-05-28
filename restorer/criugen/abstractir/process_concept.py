@@ -72,6 +72,9 @@ class ProcessConcept(object):
     def iter_all_resources(self):
         return chain(self._final_resources.iterkeys(), self._tmp_resources.iterkeys())
 
+    def iter_tmp_resources(self):
+        return self._tmp_resources.iterkeys()
+
     def get_final_handles(self, resource):
         """ Returns list of handles, so each handle `h` from this
         list: (`h`, resource) must be in the target process state after
@@ -85,6 +88,12 @@ class ProcessConcept(object):
         restoration process, i.e. (`h`, resource) is temporary pair
         """
         return self._tmp_resources.get(resource, set())
+
+    def get_all_handles_of_type(self, resource, handle_type):
+        """ Returns all handles of particular type pointing to the resource
+        :rtype: iterable
+        """
+        return (h for h in self.iter_all_handles(resource) if type(h) == handle_type)
 
     def iter_all_handles(self, resource):
         return chain(self.get_final_handles(resource), self.get_tmp_handles(resource))
