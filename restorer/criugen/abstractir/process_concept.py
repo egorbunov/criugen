@@ -113,7 +113,6 @@ class ProcessConcept(object):
                 return True
         return False
 
-
     def is_tmp_resource(self, resource):
         return resource in self._tmp_resources
 
