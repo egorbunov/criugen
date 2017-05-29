@@ -116,6 +116,9 @@ class ProcessConcept(object):
     def is_tmp_resource(self, resource):
         return resource in self._tmp_resources
 
+    def __repr__(self):
+        return "{}(pid={}, ppid={})".format(ProcessConcept.__name__, self.pid, self.ppid)
+
     def _set_handle_is_used(self, handle):
         handle_factory = self._handle_factories[type(handle)]
         if handle_factory.is_handle_used(handle):

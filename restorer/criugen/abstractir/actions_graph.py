@@ -23,8 +23,12 @@ def build_actions_graph(process_tree):
     :return: actions graph
     """
 
-    action_vertices = _gen_actions_vertices(process_tree)
-    print(action_vertices)
+    action_index, action_graph = _init_actions_graph_and_index(process_tree)
+    _build_precedence_edges(process_tree, action_index, action_graph)
+
+    del action_index
+
+    return action_graph
 
 
 def _init_actions_graph_and_index(process_tree):
@@ -68,7 +72,7 @@ def _gen_fork_actions(process_tree):
 
     for p in process_tree.processes:
         if p == process_tree.root_process:
-            pass
+            continue
         parent = process_tree.proc_parent(p)
         yield ForkProcessAction(parent=parent,
                                 child=p)
@@ -112,6 +116,10 @@ def _gen_share_actions(process_tree):
 
         for p in holders:
             p_handles = p.iter_all_handles(r)
+
+            if p == creator:
+                # do not need to share with us if we create it!
+                p_handles = (h for h in p_handles if h not in creator_handles)
 
             for p_handle in p_handles:
                 yield ShareResourceAction(process_from=creator,
@@ -258,11 +266,11 @@ def _build_precedence_edges(process_tree, actions_index, actions_graph):
     """
 
     _add_after_fork_edges(actions_index, actions_graph)
-    _add_after_resource_creation_edges(actions_index, actions_graph)
+    _add_after_resource_creation_edges(process_tree, actions_index, actions_graph)
 
 
 def _add_after_fork_edges(actions_index, actions_graph):
-    # all actions involving a process must be performed AFTER that process fork
+    # all actions involving a process must be performed AFTER that process is forked
 
     for fa in actions_index.fork_actions:
         process = fa.child  # fa is an action, which creates process fa.child
@@ -272,7 +280,7 @@ def _add_after_fork_edges(actions_index, actions_graph):
         _add_precedence_edges_from_to([fa], actions, actions_graph)
 
 
-def _add_after_resource_creation_edges(actions_index, actions_graph):
+def _add_after_resource_creation_edges(process_tree, actions_index, actions_graph):
     pass
 
 
@@ -288,5 +296,5 @@ def _add_cr_dependency_before_resource_edges(actions_index, actions_graph):
     pass
 
 
-def _add_can_exists_at_once_restriction_edges(actions_index, actions_graph):
+def _add_can_exist_together_restriction_edges(actions_index, actions_graph):
     pass

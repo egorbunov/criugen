@@ -125,6 +125,9 @@ class RegularFileConcept(ResourceConcept):
         # every process can open a file =)
         return processes
 
+    def __repr__(self):
+        return self.payload.__repr__()
+
 
 class SharedMemConcept(ResourceConcept):
     @property
@@ -145,6 +148,9 @@ class SharedMemConcept(ResourceConcept):
 
     def possible_creators(self, processes):
         return processes
+
+    def __repr__(self):
+        return self.payload.__repr__()
 
 
 class ProcessGroupConcept(ResourceConcept):
@@ -173,6 +179,9 @@ class ProcessGroupConcept(ResourceConcept):
         group_id = self.payload  # type: GroupId
         return [p for p in processes if p.pid == group_id]
 
+    def __repr__(self):
+        return "GroupConcept({})".format(self.payload)
+
 
 class ProcessSessionConcept(ResourceConcept):
     @property
@@ -200,6 +209,9 @@ class ProcessSessionConcept(ResourceConcept):
         session_id = self.payload  # type: SessionId
         return [p for p in processes if p.pid == session_id]
 
+    def __repr__(self):
+        return "SessionConcept({})".format(self.payload)
+
 
 class PipeConcept(ResourceConcept):
     @property
@@ -220,6 +232,9 @@ class PipeConcept(ResourceConcept):
 
     def possible_creators(self, processes):
         return processes
+
+    def __repr__(self):
+        return self.payload.__repr__()
 
 
 class VMAConcept(ResourceConcept):
@@ -244,6 +259,9 @@ class VMAConcept(ResourceConcept):
 
     def possible_creators(self, processes):
         return processes
+
+    def __repr__(self):
+        return self.payload.__repr__()
 
 
 class FSPropsConcept(ResourceConcept):
