@@ -53,7 +53,7 @@ def _init_actions_graph_and_index(process_tree):
 def _gen_actions_vertices(process_tree):
     """ Builds list of all actions to be performed during restore
     :type process_tree: ProcessTreeConcept
-    :rtype: iterable
+    :rtype: collections.Iterable
     """
     return itertools.chain(
         _gen_fork_actions(process_tree),
@@ -148,6 +148,7 @@ class ActionsIndex(object):
         self._actions_by_executor = {}
         self._actions_using_process = {}
         self._fork_actions = []
+        self._resource_create_acts = {}
 
     def add_action(self, action):
         if isinstance(action, ForkProcessAction):
@@ -158,6 +159,9 @@ class ActionsIndex(object):
         elif isinstance(action, CreateResourceAction):
             self._actions_by_executor.setdefault(action.process, []).append(action)
             self._actions_using_process.setdefault(action.process, []).append(action)
+            if action.resource in self._resource_create_acts:
+                raise RuntimeError("Duplicate create action for resource!")
+            self._resource_create_acts[action.resource] = action
 
         elif isinstance(action, ShareResourceAction):
             self._actions_by_executor.setdefault(action.process_from, []).append(action)
@@ -186,7 +190,10 @@ class ActionsIndex(object):
     def process_actions_with_resource(self, process, resource, handle):
         """ All actions, which are executed be specified process and
         involve (resource, handle) pair in execution, i.e. demand that
-        (resource, handle) was already created within that process
+        (resource, handle) was already created within that process;
+        Action, which "creates" the resource not included
+
+        :rtype: list
         """
         all_process_actions = self._actions_by_executor[process]
         return [a for a in all_process_actions
@@ -198,6 +205,8 @@ class ActionsIndex(object):
             return action.resource == resource and action.handle_from == handle
         if isinstance(action, RemoveResourceAction):
             return action.resource == resource and action.handle == handle
+
+        # CreateResourceAction or ForkAction are not really use the resource, so...
         return False
 
     def process_obtain_resource_action(self, process, resource, handle):
@@ -237,6 +246,12 @@ class ActionsIndex(object):
         :rtype: list[ForkProcessAction]
         """
         return self._fork_actions
+
+    def resource_create_action(self, resource):
+        """ Each resource must be created, so for each resource there must be
+        the CreateAction
+        :rtype: CreateResourceAction
+        """
 
     def resource_remove_action(self, process, r, h):
         acts = self.process_actions_with_resource(process, r, h)
@@ -281,15 +296,83 @@ def _add_after_fork_edges(actions_index, actions_graph):
 
 
 def _add_after_resource_creation_edges(process_tree, actions_index, actions_graph):
-    pass
+    """ Each (resource, handle) pair inside each process has corresponding action `cr_r`,
+    which is responsible for creation of that pair inside a process; But also there
+    are actions, which rely on that (resource, handle) is already created; So this
+    function builds edges from action `cr_r` to these actions
+    """
+
+    for process in process_tree.processes:
+        _add_after_resource_creation_edges_one_proc(process, actions_index, actions_graph)
 
 
-def _add_before_remove_resource_edges(actions_index, actions_graph):
-    pass
+def _add_after_resource_creation_edges_one_proc(process, actions_index, actions_graph):
+    """ Does the thing described in `_add_after_resource_creation_edges` doc comment,
+    but for only one process
+    """
+    for r in process.iter_all_resources():
+        for h in process.iter_all_handles(r):
+            obtain_act = actions_index.process_obtain_resource_action(process, r, h)
+            acts_with_resource = actions_index.process_actions_with_resource(process, r, h)
+
+            _add_precedence_edges_from_to([obtain_act], acts_with_resource, actions_graph)
 
 
-def _add_inherited_resource_before_fork_edges(actions_index, actions_graph):
-    pass
+def _add_before_remove_resource_edges(process_tree, actions_index, actions_graph):
+    """ If remove resource action takes place in actions vertices then
+    we need to put all other actions with resource before it in the final
+    execution scenario;
+    This function adds such precedence for temporary resources, which must
+    have corresponding remove action
+    """
+    for p in process_tree.processes:
+        _add_before_remove_resource_edges_one_proc(p, actions_index, actions_graph)
+
+
+def _add_before_remove_resource_edges_one_proc(process, actions_index, actions_graph):
+    """ Same as `_add_before_remove_resource_edges_one_proc` but for single process
+    :type process: ProcessConcept
+    """
+    for r in process.iter_tmp_resources():
+        for h in process.get_tmp_handles(r):
+            acts_with_resource = actions_index.process_actions_with_resource(process, r, h)
+            remove_act = next(a for a in acts_with_resource if isinstance(a, RemoveResourceAction))
+
+            # adding precedence edges FROM all acts except remove act TO remove act!
+            _add_precedence_edges_from_to((a for a in acts_with_resource if a != remove_act),
+                                          [remove_act],
+                                          actions_graph)
+
+
+def _add_inherited_resource_before_fork_edges(process_tree, actions_index, actions_graph):
+    """ Some resources are inherited from parent process during fork and shared
+    that way. So we have to make sure, that parent creates resource, which is
+    shared via inheritance with it's children, before forking these children!
+    (here our inheritance closure works for us so we can check only children,
+    but not the whole subtree)
+
+    :type process_tree: ProcessTreeConcept
+    :type actions_graph: Graph
+    :type actions_index: ActionsIndex
+    """
+
+    all_resources = process_tree.resource_indexer.all_resources
+    only_inherited_resources = (r for r in all_resources if r.is_inherited and not r.is_sharable)
+
+    for inh_r in only_inherited_resources:
+        create_action = actions_index.resource_create_action(inh_r)
+        creator = create_action.process
+        assert len(create_action.handles) == 1  # we do not support multi handle non-sharable resource for now
+        handle = create_action.handles[0]
+
+        # only those fork actions, which fork children, who really share the inheritable
+        # resource
+        fork_acts_which_share = (
+            fa for fa in actions_index.fork_actions
+            if fa.parent == creator and fa.child.has_resource_at_handle(inh_r, handle)
+        )
+
+        _add_precedence_edges_from_to([create_action], fork_acts_which_share)
 
 
 def _add_cr_dependency_before_resource_edges(actions_index, actions_graph):

@@ -3,11 +3,12 @@
 
 from collections import namedtuple
 from pyutils.dataclass import DataClass
+import process_concept
 
 
 class ForkProcessAction(DataClass):
-    parent = "process, which forks child"
-    child = "child, which is being forked"
+    parent = "process, which forks child"  # type: process_concept.ProcessConcept
+    child = "child, which is being forked"  # type: process_concept.ProcessConcept
 
 
 class CreateResourceAction(DataClass):

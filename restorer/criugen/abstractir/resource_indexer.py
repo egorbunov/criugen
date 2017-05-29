@@ -33,13 +33,14 @@ class ResourcesIndexer(ProcessResourceListener):
         return self._resource_handle_holders_map.keys()
 
     def get_resource_holders(self, resource):
-        """
+        """ Processes, which hold specified resource
         :rtype: list[ProcessConcept] 
         """
         return self._resource_holders_map.get(resource, [])
 
     def get_resource_handle_holders(self, resource, handle):
-        """
+        """ Processes, which hold specified resource pointing
+        to it with specified handle
         :rtype: list[ProcessConcept] 
         """
         return self._resource_handle_holders_map.get((resource, handle))

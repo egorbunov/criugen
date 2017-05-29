@@ -70,6 +70,9 @@ class ProcessConcept(object):
         self.add_tmp_resource(resource, automatic_handle)
 
     def iter_all_resources(self):
+        """
+        :rtype: collections.Iterable[ResourceConcept]
+        """
         return chain(self._final_resources.iterkeys(), self._tmp_resources.iterkeys())
 
     def iter_tmp_resources(self):
@@ -91,7 +94,7 @@ class ProcessConcept(object):
 
     def get_all_handles_of_type(self, resource, handle_type):
         """ Returns all handles of particular type pointing to the resource
-        :rtype: iterable
+        :rtype: collections.Iterable
         """
         return (h for h in self.iter_all_handles(resource) if type(h) == handle_type)
 
