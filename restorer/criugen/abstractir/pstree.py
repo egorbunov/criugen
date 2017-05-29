@@ -1,6 +1,7 @@
 from process_concept import ProcessConcept
 from resource_indexer import ResourcesIndexer
 import util
+from pyutils.graph import Graph
 
 
 class ProcessTreeConcept(object):
@@ -24,7 +25,7 @@ class ProcessTreeConcept(object):
 
         self._root = roots[0]
         self._proc_map = {p.pid: p for p in processes}
-        self._proc_children = self._construct_children_map()
+        self._proc_graph = self._construct_process_graph()
         self._proc_depths_map = self._calc_process_depths()
 
         # creating resource indexer to store resources index
@@ -96,17 +97,6 @@ class ProcessTreeConcept(object):
     def process_depth(self, process):
         return self._proc_depths_map[process]
 
-    def dfs(self, pre_visit=util.noop_fun, post_visit=util.noop_fun):
-        """ Performs DFS on process tree with given pre visiting function
-        and post visiting function
-        
-        :param pre_visit: function, which takes one parameter: current process node,
-               and invoked before visiting that node children
-        :param post_visit: function, which takes one parameter: current process node,
-               and invoked after visiting that node children
-        """
-        self._dfs(self._root, pre_visit, post_visit)
-
     def lca(self, proc_a, proc_b):
         """ simplest lca implementation; do not need something
         super efficient for now
@@ -125,23 +115,6 @@ class ProcessTreeConcept(object):
 
         return proc_a
 
-    def _dfs(self, cur, pre_visit, post_visit):
-        pre_visit(cur)
-        for child in self.proc_children(cur):
-            self._dfs(child, pre_visit, post_visit)
-        post_visit(cur)
-
-    def _construct_children_map(self):
-        def children_construct(acc, p):
-            if p.ppid not in acc:
-                acc[p.ppid] = []
-            acc[p.ppid].append(p)
-            if p.pid not in acc:
-                acc[p.pid] = []
-            return acc
-
-        return reduce(children_construct, self._processes, {})
-
     def _calc_process_depths(self):
         # calculating process depths
         process_depths_map = {}  # type: dict[ProcessConcept, int]
@@ -152,5 +125,19 @@ class ProcessTreeConcept(object):
             else:
                 process_depths_map[p] = process_depths_map[self.proc_parent(p)] + 1
 
-        self.dfs(pre_visit=calc_node_depth)
+        self._proc_graph.dfs(v_from=self._root, pre_visit=calc_node_depth)
         return process_depths_map
+
+    def _construct_process_graph(self):
+        process_graph = Graph()
+
+        for p in self.processes:
+            process_graph.add_vertex(p)
+
+        for p in self._processes:
+            if p == self._root:
+                continue
+            parent = self.proc_parent(p)
+            process_graph.add_edge(parent, p)
+
+        return process_graph
