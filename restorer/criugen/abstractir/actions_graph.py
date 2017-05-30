@@ -21,7 +21,7 @@ def build_actions_graph(process_tree):
     """
 
     action_index, action_graph = _init_actions_graph_and_index(process_tree)
-    _build_precedence_edges(process_tree, action_index, action_graph)
+    _build_all_precedence_edges(process_tree, action_index, action_graph)
 
     del action_index
 
@@ -29,8 +29,9 @@ def build_actions_graph(process_tree):
 
 
 def _init_actions_graph_and_index(process_tree):
-    """ Creates actions index and action graph without edges (only with
-    vertices)
+    """ Creates actions index and action graph without edges, but with all
+    action vertices
+
     :type process_tree: ProcessTreeConcept
     :return: pair: graph and actions index
     :rtype: tuple[ActionsIndex, Graph]
@@ -62,18 +63,18 @@ def _add_precedence_edges_from_to(actions_from, actions_to, actions_graph):
             actions_graph.add_edge(v, u)
 
 
-def _build_precedence_edges(process_tree, actions_index, actions_graph):
+def _build_all_precedence_edges(process_tree, actions_index, actions_graph):
     """
     :type process_tree: ProcessTreeConcept
     :type actions_index: ActionsIndex
     :type actions_graph: Graph
     """
 
-    _add_after_fork_edges(actions_index, actions_graph)
-    _add_after_resource_creation_edges(process_tree, actions_index, actions_graph)
+    _ensure_fork_before_act(actions_index, actions_graph)
+    _ensure_resource_created_before_used(process_tree, actions_index, actions_graph)
 
 
-def _add_after_fork_edges(actions_index, actions_graph):
+def _ensure_fork_before_act(actions_index, actions_graph):
     """ All actions involving a process must be performed AFTER
     that process is forked
 
@@ -88,7 +89,7 @@ def _add_after_fork_edges(actions_index, actions_graph):
         _add_precedence_edges_from_to([fa], actions, actions_graph)
 
 
-def _add_after_resource_creation_edges(process_tree, actions_index, actions_graph):
+def _ensure_resource_created_before_used(process_tree, actions_index, actions_graph):
     """ Each (resource, handle) pair inside each process has corresponding action `cr_r`,
     which is responsible for creation of that pair inside a process; But also there
     are actions, which rely on that (resource, handle) is already created; So this
@@ -99,10 +100,10 @@ def _add_after_resource_creation_edges(process_tree, actions_index, actions_grap
     """
 
     for process in process_tree.processes:
-        _add_after_resource_creation_edges_one_proc(process, actions_index, actions_graph)
+        _ensure_resource_created_before_used_one_proc(process, actions_index, actions_graph)
 
 
-def _add_after_resource_creation_edges_one_proc(process, actions_index, actions_graph):
+def _ensure_resource_created_before_used_one_proc(process, actions_index, actions_graph):
     """ Does the thing described in `_add_after_resource_creation_edges` doc comment,
     but for only one process
     """
@@ -112,7 +113,7 @@ def _add_after_resource_creation_edges_one_proc(process, actions_index, actions_
         _add_precedence_edges_from_to([obtain_act], acts_with_resource, actions_graph)
 
 
-def _add_before_remove_resource_edges(process_tree, actions_index, actions_graph):
+def _ensure_resource_removed_after_used(process_tree, actions_index, actions_graph):
     """ If remove resource action takes place in actions vertices then
     we need to put all other actions with resource before it in the final
     execution scenario;
@@ -123,10 +124,10 @@ def _add_before_remove_resource_edges(process_tree, actions_index, actions_graph
 
     """
     for p in process_tree.processes:
-        _add_before_remove_resource_edges_one_proc(p, actions_index, actions_graph)
+        _ensure_resource_removed_after_used_one_proc(p, actions_index, actions_graph)
 
 
-def _add_before_remove_resource_edges_one_proc(process, actions_index, actions_graph):
+def _ensure_resource_removed_after_used_one_proc(process, actions_index, actions_graph):
     """ Same as `_add_before_remove_resource_edges_one_proc` but for single process
     :type process: ProcessConcept
     """
@@ -140,7 +141,7 @@ def _add_before_remove_resource_edges_one_proc(process, actions_index, actions_g
                                       actions_graph)
 
 
-def _add_inherited_resource_cr_before_fork_edges(actions_index, actions_graph):
+def _ensure_inherited_resource_created_before_fork(actions_index, actions_graph):
     """ Some resources are inherited from parent process during fork and shared
     that way. So we have to make sure, that parent creates resource, which is
     shared via inheritance with it's children, before forking these children!
@@ -166,14 +167,12 @@ def _add_inherited_resource_cr_before_fork_edges(actions_index, actions_graph):
         creator = cr_act.process
         assert len(cr_act.handles) == 1  # we do not support multi handle non-sharable resource for now
         handle = cr_act.handles[0]
-
         # only those fork actions, which fork children, who really share the inheritable
         # resource
         fork_acts_which_share = (
             fa for fa in actions_index.fork_actions
             if fa.parent == creator and fa.child.has_resource_at_handle(resource, handle)
         )
-
         _add_precedence_edges_from_to([cr_act], fork_acts_which_share, actions_graph)
 
         if not creator.is_tmp_resource(resource, handle):
@@ -181,13 +180,12 @@ def _add_inherited_resource_cr_before_fork_edges(actions_index, actions_graph):
 
         # resource is temporary, there must be reomve action
         remove_act = actions_index.resource_remove_action(creator, resource, handle)
-
         # temporary resource must be deleted only after forking children, which share that resource
         # via inheritance =)
         _add_precedence_edges_from_to(fork_acts_which_share, [remove_act], actions_graph)
 
 
-def _add_cr_dependency_before_cr_resource_edges(actions_index, actions_graph):
+def _ensure_dependencies_created_before_used(actions_index, actions_graph):
     """ We have notion of dependency resource: resource, which needed for creation of another
     resource. So we have to make sure, for correct restoration action sequence, that before
     creation of dependant resource the action of creation (initialization) of dependency resource
@@ -261,7 +259,7 @@ def _find_proper_dependency_creation_act(dep_resource, process, actions_index):
                        .format(dep_resource))
 
 
-def _add_can_exist_together_restriction_edges(process_tree, actions_index, actions_graph):
+def _ensure_consistency(process_tree, actions_index, actions_graph):
     """ Tries to build such precedence edges on actions that at each point
     in time during restoration process, there would be now two conflicting
     resources within one process. Conflicting resources are those resource,
@@ -294,7 +292,7 @@ def _add_can_exist_together_restriction_edges(process_tree, actions_index, actio
     """
 
 
-def _add_can_exist_together_restriction_edges_one_process(process, actions_index, actions_graph):
+def _ensure_consistency_one_process(process, actions_index, actions_graph):
     """
     :type process: ProcessConcept
     :type actions_index: ActionsIndex
