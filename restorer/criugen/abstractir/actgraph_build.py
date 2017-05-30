@@ -25,7 +25,6 @@ def build_actions_graph(process_tree):
 
     action_index, action_graph = _init_actions_graph_and_index(process_tree)
     _build_all_precedence_edges(process_tree, action_index, action_graph)
-
     del action_index
 
     return action_graph
@@ -51,21 +50,6 @@ def _init_actions_graph_and_index(process_tree):
     return action_index, action_graph
 
 
-def _add_precedence_edges_from_to(actions_from, actions_to, actions_graph):
-    """ for each `v in actions_from` for each `u in actions_to` add edge
-    (v, u) to the actions graph
-
-    :param actions_from: actions, from which edges will go
-    :param actions_to: actions, to which edges will go
-    :param actions_graph: graph of actions, where to add edges
-    :type actions_graph: Graph
-    """
-
-    for v in actions_from:
-        for u in actions_to:
-            actions_graph.add_edge(v, u)
-
-
 def _build_all_precedence_edges(process_tree, actions_index, actions_graph):
     """
     :type process_tree: ProcessTreeConcept
@@ -79,6 +63,21 @@ def _build_all_precedence_edges(process_tree, actions_index, actions_graph):
     _ensure_inherited_resource_created_before_fork(actions_index, actions_graph)
     _ensure_dependencies_created_before_used(actions_index, actions_graph)
     _ensure_consistency(process_tree, actions_index, actions_graph)
+
+
+def _add_precedence_edges_from_to(actions_from, actions_to, actions_graph):
+    """ for each `v in actions_from` for each `u in actions_to` add edge
+    (v, u) to the actions graph
+
+    :param actions_from: actions, from which edges will go
+    :param actions_to: actions, to which edges will go
+    :param actions_graph: graph of actions, where to add edges
+    :type actions_graph: Graph
+    """
+
+    for v in actions_from:
+        for u in actions_to:
+            actions_graph.add_edge(v, u)
 
 
 
