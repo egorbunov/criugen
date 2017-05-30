@@ -116,8 +116,8 @@ class ProcessConcept(object):
                 return True
         return False
 
-    def is_tmp_resource(self, resource):
-        return resource in self._tmp_resources
+    def is_tmp_resource(self, resource, handle):
+        return resource in self._tmp_resources and handle in self._tmp_resources[resource]
 
     def __repr__(self):
         return "{}(pid={}, ppid={})".format(ProcessConcept.__name__, self.pid, self.ppid)

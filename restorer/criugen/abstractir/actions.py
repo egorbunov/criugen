@@ -4,6 +4,7 @@
 from collections import namedtuple
 from pyutils.dataclass import DataClass
 import process_concept
+import resource_concepts
 
 
 class ForkProcessAction(DataClass):
@@ -12,8 +13,8 @@ class ForkProcessAction(DataClass):
 
 
 class CreateResourceAction(DataClass):
-    process = "process, which creates resource"
-    resource = "resource, which is being created"
+    process = "process, which creates resource"  # type: process_concept.ProcessConcept
+    resource = "resource, which is being created"  # type: resource_concepts.ResourceConcept
     handles = "ist of handles; contains more than one handle " \
               "in case of multi-handle resource"
 
