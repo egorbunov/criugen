@@ -57,6 +57,9 @@ class ResourceConcept(object):
 
     @property
     def dependencies(self):
+        """
+        :rtype: list[ResourceConcept]
+        """
         return self._dependencies
 
     @abstractproperty
