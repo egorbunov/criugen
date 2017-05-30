@@ -75,12 +75,20 @@ class ProcessConcept(object):
         """
         return chain(self._final_resources.iterkeys(), self._tmp_resources.iterkeys())
 
-    def iter_resource_handle_pairs(self):
+    def iter_all_resource_handle_pairs(self):
         """ Iterable over all pairs (resource, handle)
         :rtype: collections.Iterable
         """
         for r in self.iter_all_resources():
             for h in self.iter_all_handles(r):
+                yield (r, h)
+
+    def iter_tmp_resource_handle_pairs(self):
+        """ Iterable over temporary pairs (resource, handle)
+        :rtype: collections.Iterable
+        """
+        for r, handles in self._tmp_resources.iteritems():
+            for h in handles:
                 yield (r, h)
 
     def iter_tmp_resources(self):

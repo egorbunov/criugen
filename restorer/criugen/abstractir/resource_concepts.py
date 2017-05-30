@@ -58,7 +58,7 @@ class ResourceConcept(object):
     @property
     def dependencies(self):
         """
-        :rtype: list[ResourceConcept]
+        :rtype: list[tuple[ResourceConcept, type]]
         """
         return self._dependencies
 

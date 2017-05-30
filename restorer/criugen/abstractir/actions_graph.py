@@ -75,6 +75,11 @@ def _build_all_precedence_edges(process_tree, actions_index, actions_graph):
 
     _ensure_fork_before_act(actions_index, actions_graph)
     _ensure_resource_created_before_used(process_tree, actions_index, actions_graph)
+    _ensure_resource_removed_after_used(process_tree, actions_index, actions_graph)
+    _ensure_inherited_resource_created_before_fork(actions_index, actions_graph)
+    _ensure_dependencies_created_before_used(actions_index, actions_graph)
+    _ensure_consistency(process_tree, actions_index, actions_graph)
+
 
 
 def _ensure_fork_before_act(actions_index, actions_graph):
@@ -110,7 +115,7 @@ def _ensure_resource_created_before_used_one_proc(process, actions_index, action
     """ Does the thing described in `_add_after_resource_creation_edges` doc comment,
     but for only one process
     """
-    for r, h in process.iter_resource_handle_pairs():
+    for r, h in process.iter_all_resource_handle_pairs():
         obtain_act = actions_index.process_obtain_resource_action(process, r, h)
         acts_with_resource = actions_index.process_actions_with_resource(process, r, h)
         _add_precedence_edges_from_to([obtain_act], acts_with_resource, actions_graph)
@@ -134,7 +139,7 @@ def _ensure_resource_removed_after_used_one_proc(process, actions_index, actions
     """ Same as `_add_before_remove_resource_edges_one_proc` but for single process
     :type process: ProcessConcept
     """
-    for r, h in process.iter_resource_handle_pairs():
+    for r, h in process.iter_tmp_resource_handle_pairs():
         acts_with_resource = actions_index.process_actions_with_resource(process, r, h)
         remove_act = next(a for a in acts_with_resource if isinstance(a, RemoveResourceAction))
 
@@ -207,7 +212,8 @@ def _ensure_dependencies_created_before_used(actions_index, actions_graph):
         resource = cr_act.resource
         dependencies = resource.dependencies
 
-        for dependency in dependencies:
+        # ignoring handle type here (_)
+        for dependency, _ in dependencies:
             dep_cr_act, handles = _find_proper_dependency_creation_act(dependency, process, actions_index)
             _add_precedence_edges_from_to([dep_cr_act], [cr_act], actions_graph)
 
@@ -294,6 +300,9 @@ def _ensure_consistency(process_tree, actions_index, actions_graph):
     :type actions_graph: Graph
     """
 
+    for process in process_tree.processes:
+        _ensure_consistency_one_process(process, actions_index, actions_graph)
+
 
 def _ensure_consistency_one_process(process, actions_index, actions_graph):
     """
@@ -305,7 +314,7 @@ def _ensure_consistency_one_process(process, actions_index, actions_graph):
     :type actions_graph: Graph
     """
 
-    resource_pairs = list(process.iter_resource_handle_pairs())
+    resource_pairs = list(process.iter_all_resource_handle_pairs())
 
     # sorting resource pairs such that temporary resources are at the very beginning
     # and between among temporary resources inherited resources are closer to the
