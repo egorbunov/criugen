@@ -125,7 +125,7 @@ class ProcessTreeConcept(object):
             else:
                 process_depths_map[p] = process_depths_map[self.proc_parent(p)] + 1
 
-        self._proc_graph.dfs(v_from=self._root, pre_visit=calc_node_depth)
+        self._proc_graph.dfs_from(v_from=self._root, pre_visit=calc_node_depth)
         return process_depths_map
 
     def _construct_process_graph(self):

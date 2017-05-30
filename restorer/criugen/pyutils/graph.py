@@ -41,7 +41,7 @@ class Graph(object):
 
         return self._adjacency_list[vertex]
 
-    def dfs(self, v_from, pre_visit=func.noop_fun, post_visit=func.noop_fun):
+    def dfs_from(self, v_from, pre_visit=func.noop_fun, post_visit=func.noop_fun):
         """ Traverses one connected component of the graph, which
         contains `v_from` vertex; Also it invokes pre_visit function
         for each vertex v before visiting it's neighbourhood and invokes
@@ -62,8 +62,14 @@ class Graph(object):
             raise Graph.NoSuchVertex(v_from)
 
         visited_map = {v: False for v in self.vertices_iter}
-
         self._dfs(v_from, pre_visit, post_visit, visited_map)
+
+    def dfs(self, pre_visit=func.noop_fun, post_visit=func.noop_fun):
+        """ Same as dfs_from, but performs dfs of the whole graph
+        (all graph components). Starting vertex is not specified
+        """
+        pass
+
 
     def _dfs(self, cur_v, pre_visit, post_visit, visited_map):
         pre_visit(cur_v)
