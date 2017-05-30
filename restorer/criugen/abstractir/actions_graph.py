@@ -1,7 +1,6 @@
 """ Action graph building and other stuff
 """
 
-
 from pstree import ProcessTreeConcept
 from process_concept import ProcessConcept
 from actions import *
@@ -47,6 +46,7 @@ def _init_actions_graph_and_index(process_tree):
 
     return action_index, action_graph
 
+
 def _add_precedence_edges_from_to(actions_from, actions_to, actions_graph):
     """ for each `v in actions_from` for each `u in actions_to` add edge
     (v, u) to the actions graph
@@ -74,11 +74,11 @@ def _build_precedence_edges(process_tree, actions_index, actions_graph):
 
 
 def _add_after_fork_edges(actions_index, actions_graph):
-    """
+    """ All actions involving a process must be performed AFTER
+    that process is forked
+
     Complexity: (Process-cnt) * (Max-actions-per-process)
     """
-
-    # all actions involving a process must be performed AFTER that process is forked
 
     for fa in actions_index.fork_actions:
         process = fa.child  # fa is an action, which creates process fa.child
@@ -106,12 +106,10 @@ def _add_after_resource_creation_edges_one_proc(process, actions_index, actions_
     """ Does the thing described in `_add_after_resource_creation_edges` doc comment,
     but for only one process
     """
-    for r in process.iter_all_resources():
-        for h in process.iter_all_handles(r):
-            obtain_act = actions_index.process_obtain_resource_action(process, r, h)
-            acts_with_resource = actions_index.process_actions_with_resource(process, r, h)
-
-            _add_precedence_edges_from_to([obtain_act], acts_with_resource, actions_graph)
+    for r, h in process.iter_resource_handle_pairs():
+        obtain_act = actions_index.process_obtain_resource_action(process, r, h)
+        acts_with_resource = actions_index.process_actions_with_resource(process, r, h)
+        _add_precedence_edges_from_to([obtain_act], acts_with_resource, actions_graph)
 
 
 def _add_before_remove_resource_edges(process_tree, actions_index, actions_graph):
@@ -132,15 +130,14 @@ def _add_before_remove_resource_edges_one_proc(process, actions_index, actions_g
     """ Same as `_add_before_remove_resource_edges_one_proc` but for single process
     :type process: ProcessConcept
     """
-    for r in process.iter_tmp_resources():
-        for h in process.get_tmp_handles(r):
-            acts_with_resource = actions_index.process_actions_with_resource(process, r, h)
-            remove_act = next(a for a in acts_with_resource if isinstance(a, RemoveResourceAction))
+    for r, h in process.iter_resource_handle_pairs():
+        acts_with_resource = actions_index.process_actions_with_resource(process, r, h)
+        remove_act = next(a for a in acts_with_resource if isinstance(a, RemoveResourceAction))
 
-            # adding precedence edges FROM all acts except remove act TO remove act!
-            _add_precedence_edges_from_to((a for a in acts_with_resource if a != remove_act),
-                                          [remove_act],
-                                          actions_graph)
+        # adding precedence edges FROM all acts except remove act TO remove act!
+        _add_precedence_edges_from_to((a for a in acts_with_resource if a != remove_act),
+                                      [remove_act],
+                                      actions_graph)
 
 
 def _add_inherited_resource_cr_before_fork_edges(actions_index, actions_graph):
@@ -223,13 +220,15 @@ def _add_cr_dependency_before_cr_resource_edges(actions_index, actions_graph):
             # TODO: each handle. And then this edges would be added during execution
             # TODO: of `_add_before_remove_resource_edges_one_proc`. But for now it is
             # TODO: easier to put it here
-            for handle in handles:
-                if not process.is_tmp_resource(dependency, handle):
-                    continue
 
-                # temporary pair (dependency, handle)
-                dep_remove_act = actions_index.resource_remove_action(process, dependency, handle)
-                _add_precedence_edges_from_to([cr_act], [dep_remove_act], actions_graph)
+            # getting remove actions for this dependency resource
+            dep_remove_acts = \
+                (actions_index.resource_remove_action(process, dependency, handle) for handle in handles
+                 if process.is_tmp_resource(dependency, handle))
+
+            # ensure, that create resource action should be executed before
+            # all these remove dependency actions
+            _add_precedence_edges_from_to([cr_act], dep_remove_acts, actions_graph)
 
 
 def _find_proper_dependency_creation_act(dep_resource, process, actions_index):
