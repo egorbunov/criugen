@@ -1,12 +1,15 @@
 """ Action graph building and other stuff
 """
 
+import functools
+
 from pstree import ProcessTreeConcept
 from process_concept import ProcessConcept
 from actions import *
 from pyutils.graph import Graph
 import actions_gen
 from actions_index import ActionsIndex
+import consistency
 
 
 def build_actions_graph(process_tree):
@@ -294,8 +297,46 @@ def _ensure_consistency(process_tree, actions_index, actions_graph):
 
 def _ensure_consistency_one_process(process, actions_index, actions_graph):
     """
+    Complexity: (Max-tmp-pairs-count-per-process) * (Max-pairs-per-process)
+    Complexity is quadratic, but practically temporary resources are rare, are they?
+
     :type process: ProcessConcept
     :type actions_index: ActionsIndex
     :type actions_graph: Graph
     """
-    pass
+
+    resource_pairs = list(process.iter_resource_handle_pairs())
+
+    # sorting resource pairs such that temporary resources are at the very beginning
+    # and between among temporary resources inherited resources are closer to the
+    # beginning than others
+    resource_pairs.sort(key=functools.partial(_get_rh_pair_priority, process))
+
+    for i, (r_from, h_from) in enumerate(resource_pairs):
+        if not process.is_tmp_resource(r_from, h_from):
+            break
+
+        remove_prev = actions_index.resource_remove_action(process, r_from, h_from)
+        for j, (r_to, h_to) in enumerate(resource_pairs[i+1:]):
+            if consistency.can_exist_together(r_from, h_from, r_to, h_to):
+                continue
+
+            # (r_from, h_from) and (r_to, h_to) are conflicting resources!
+            obtain_next = actions_index.process_obtain_resource_action(process, r_to, h_to)
+            _add_precedence_edges_from_to([remove_prev], [obtain_next], actions_graph)
+
+
+def _get_rh_pair_priority(process, resource_handle):
+    r, h = resource_handle
+
+    if not process.is_tmp_resource(r, h):
+        return 100
+
+    # (r, h) is temporary resource
+
+    if r.is_inherited and not r.is_sharable:
+        return 0  # highest priority
+    if r.is_sharable:
+        return 1
+
+    return 2  # private resource
