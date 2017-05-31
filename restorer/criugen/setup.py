@@ -17,7 +17,8 @@ setup(
     author_email='egor-mailbox@ya.ru',
     url='https://github.com/egorbunov/v2criu/restorer/criugen',
     install_requires=[
-        'crit'  # there is no such pip module, but can be installed from CRIU sources
+        'crit',  # there is no such pip module, but can be installed from CRIU sources
+        'argparse'
     ],
     license=license_,
     packages=find_packages(exclude=('tests', 'docs'))
