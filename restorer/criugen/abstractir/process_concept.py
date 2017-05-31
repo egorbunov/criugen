@@ -153,6 +153,10 @@ class ProcessConcept(object):
         """
         return resource in self._tmp_resources and handle in self._tmp_resources[resource]
 
+    @property
+    def minimalistic_repr(self):
+        return "Process(pid={}, ppid={})".format(self.pid, self.ppid)
+
     def __repr__(self):
         return "{}(pid={}, ppid={})".format(ProcessConcept.__name__, self.pid, self.ppid)
 

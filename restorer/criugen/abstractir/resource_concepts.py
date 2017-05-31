@@ -106,6 +106,12 @@ class ResourceConcept(object):
         :type processes: list[process_concept.ProcessConcept]
         """
 
+    @abstractproperty
+    def minimalistic_repr(self):
+        """ Minimalistic str representation
+        :rtype: basestring
+        """
+
 
 class RegularFileConcept(ResourceConcept):
     @property
@@ -124,12 +130,18 @@ class RegularFileConcept(ResourceConcept):
     def is_inherited(self):
         return True
 
+    @property
+    def minimalistic_repr(self):
+        reg_file = self.payload  # type: crdata.RegFile
+        file_name = str(reg_file.path.split("/")[-1])
+        return "RegFile({}, '{}')".format(reg_file.id, file_name)
+
     def possible_creators(self, processes):
         # every process can open a file =)
         return processes
 
     def __repr__(self):
-        return self.payload.__repr__()
+        return self.payload.__repr__
 
 
 class SharedMemConcept(ResourceConcept):
@@ -148,6 +160,11 @@ class SharedMemConcept(ResourceConcept):
     @property
     def is_inherited(self):
         return True
+
+    @property
+    def minimalistic_repr(self):
+        shmem = self.payload  # type: crdata.SharedAnonMem
+        return "ShMem({})".format(shmem.id)
 
     def possible_creators(self, processes):
         return processes
@@ -175,6 +192,10 @@ class ProcessGroupConcept(ResourceConcept):
     @property
     def is_inherited(self):
         return True
+
+    @property
+    def minimalistic_repr(self):
+        return "Group({})".format(self.payload)
 
     def possible_creators(self, processes):
         # process group with special id can be created only
@@ -206,6 +227,10 @@ class ProcessSessionConcept(ResourceConcept):
     def is_inherited(self):
         return True
 
+    @property
+    def minimalistic_repr(self):
+        return "Session({})".format(self.payload)
+
     def possible_creators(self, processes):
         # session with special id can be created only
         # by process with pid equal to that id
@@ -233,6 +258,11 @@ class PipeConcept(ResourceConcept):
     def is_sharable(self):
         return True
 
+    @property
+    def minimalistic_repr(self):
+        pipe = self.payload  # type: resource_adapters.PipeResource
+        return "Pipe({})".format(pipe.id)
+
     def possible_creators(self, processes):
         return processes
 
@@ -259,6 +289,11 @@ class VMAConcept(ResourceConcept):
     @property
     def is_sharable(self):
         return False
+
+    @property
+    def minimalistic_repr(self):
+        vm_area = self.payload  # type: crdata.VmArea
+        return "VMA({}-{}, {})".format(vm_area.start, vm_area.end, vm_area.shmid)
 
     def possible_creators(self, processes):
         return processes
@@ -288,6 +323,11 @@ class FSPropsConcept(ResourceConcept):
     def is_sharable(self):
         return False
 
+    @property
+    def minimalistic_repr(self):
+        fs = self.payload  # type: crdata.FSProps
+        return "FileSys({}, {}, {})".format(fs.cwd_id, fs.root_id, fs.umask)
+
     def possible_creators(self, processes):
         return processes
 
@@ -311,6 +351,10 @@ class ProcessInternalsConcept(ResourceConcept):
     @property
     def is_sharable(self):
         return False
+
+    @property
+    def minimalistic_repr(self):
+        return "Internals({})".format(type(self.payload).__name__)
 
     def possible_creators(self, processes):
         # for now no restrictions and it seems to be ok

@@ -1,13 +1,12 @@
 #! /usr/bin/env python2
 
+import argparse
 import json
 import sys
-import argparse
 
+from abstractir.resource_concepts import *
 from model import loader
 from model.crdata import Application
-from dumpbrowse import print_utils
-from abstractir.resource_concepts import *
 
 PROGRAM_NAME = "criugen.py"
 
@@ -31,7 +30,7 @@ def main(args):
     application = loader.load_from_imgs(dump_dir)
 
     # invoking command-special processor
-    processor_callback(application, args)
+    processor_callback(application, args, cmd_parser)
 
 
 def build_parsers():
@@ -70,6 +69,18 @@ def build_parsers():
     graph_command_parser = argparse.ArgumentParser(prog="{} {}".format(PROGRAM_NAME, generate_graph_command),
                                                    description='Actions graph visualization command',
                                                    parents=[root_parser])
+    graph_command_parser.add_argument('--show', help="show graph immediately",
+                                      default=False, action='store_true')
+    graph_command_parser.add_argument('--type', help="output drawing type, possible = [svg, pdf, png]; "
+                                                     "Default is pdf",
+                                      default='pdf')
+    graph_command_parser.add_argument('--layout', help="Set graphviz ordering layout, one of "
+                                                       "['LR', 'TB', ...]; default: 'TB'",
+                                      default='TB')
+    graph_command_parser.add_argument('--cluster', help="If set, then actions are clustered by executing process",
+                                      default=False, action='store_true')
+    graph_command_parser.add_argument('--sorted', help="If set, then actual actions list is drawn, as it would "
+                                                       "be executed by abstract process-restore machine =)")
     graph_command_parser.add_argument('--skip_vmas', help="Skip all actions with Virtual Memory Area resources",
                                       default=False, action='store_true')
     graph_command_parser.add_argument('--skip_regfiles', help="Skip all actions with Regular File resources",
@@ -84,7 +95,7 @@ def build_parsers():
                                       default=False, action='store_true')
     graph_command_parser.add_argument('--skip_shmem', help="Skip all actions with Shared Mem resources",
                                       default=False, action='store_true')
-    graph_command_parser.add_argument('output_file', help="output svg file path")
+    graph_command_parser.add_argument('output_file', help="output graph drawing file path")
 
     return command_parser, {generate_program_command: (gen_program_cmd_parse, generate_final_commands),
                             generate_actions_command: (actions_cmd_parser, generate_intermediate_actions),
@@ -99,7 +110,7 @@ def exit_error(message, print_help_parser=None):
     exit(1)
 
 
-def generate_final_commands(application, args):
+def generate_final_commands(application, args, parser):
     """
     :type application: Application
     """
@@ -117,7 +128,7 @@ def generate_final_commands(application, args):
     raise RuntimeError("This feature is coming soon ;)")
 
 
-def generate_intermediate_actions(application, args):
+def generate_intermediate_actions(application, args, parser):
     """
     :type application: Application
     """
@@ -134,13 +145,13 @@ def generate_intermediate_actions(application, args):
     raise RuntimeError("This feature is coming soon ;)")
 
 
-def generate_actions_graph(application, args):
+def generate_actions_graph(application, args, parser):
     """
     :type application: Application
     """
     from abstractir.concept import build_concept_process_tree
     from abstractir.actgraph_build import build_actions_graph
-    from visualize.core import render_actions_graph_svg
+    from visualize.core import render_actions_graph
 
     process_tree = build_concept_process_tree(application)
 
@@ -160,8 +171,13 @@ def generate_actions_graph(application, args):
     if args.skip_shmem:
         resource_types_to_skip.append(SharedMemConcept)
 
+    if args.type not in ['svg', 'pdf', 'png']:
+        exit_error("unknown output image type: {}".format(args.type), parser)
+
     graph = build_actions_graph(process_tree, tuple(resource_types_to_skip))
-    render_actions_graph_svg(graph, args.output_file)
+
+    render_actions_graph(graph, args.output_file, type=args.type, view=args.show,
+                         layout=args.layout, do_cluster=args.cluster)
 
 
 if __name__ == "__main__":

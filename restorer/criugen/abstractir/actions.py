@@ -33,3 +33,15 @@ class RemoveResourceAction(DataClass):
     resource = "resource, handle to which is being removed from the process"
     handle = "handle, which is being released, so (resource, handle) pair " \
              "is removed from `process` as an effect of this action"
+
+
+def get_action_executor(action):
+    """ Returns process, which can be treated as action executor or
+    at main actor =)
+    """
+    if isinstance(action, ForkProcessAction):
+        return action.parent
+    if isinstance(action, (CreateResourceAction, RemoveResourceAction)):
+        return action.process
+    if isinstance(action, ShareResourceAction):
+        return action.process_from
