@@ -84,7 +84,11 @@ class DirectedGraph(object):
         """ Same as dfs_from, but performs dfs of the whole graph
         (all graph components). Starting vertex is not specified
         """
-        pass
+        is_visited = {v: False for v in self.vertices_iter}
+        for v in is_visited.keys():
+            if is_visited[v]:
+                continue
+            self._dfs(v, pre_visit, post_visit)
 
     def _dfs(self, cur_v, pre_visit, post_visit, visited_map):
         pre_visit(cur_v)
