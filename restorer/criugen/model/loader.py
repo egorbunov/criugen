@@ -118,24 +118,6 @@ def _parse_pagemap(pagemap_item):
     )
 
 
-def _parse_sigacts(sigact_item):
-    """
-    :param sigact_item: item loaded from sigacts-{pid} image 
-    :return: array of sigaction descriptions
-    :rtype: list[crdata.SignalAction]
-    """
-    return [
-        crdata.SignalAction(
-            resource_id=next_resource_id(),
-            sigaction=e['sigaction'],
-            flags=e['flags'],
-            restorer=e['restorer'],
-            mask=e['mask']
-        )
-        for e in sigact_item['entries']
-    ]
-
-
 def _parse_fs(fs_item):
     """
     :param fs_item: item loaded from fs-{pid} image
@@ -148,6 +130,24 @@ def _parse_fs(fs_item):
         root_id=fs_item['entries'][0]['root_id'],
         umask=fs_item['entries'][0]['umask']
     )
+
+
+def _parse_sigacts(task_core):
+    """
+    :param task_core: task core element
+    :rtype: list[crdata.SignalAction]
+    """
+    return [
+        crdata.SignalAction(
+            resource_id=next_resource_id(),
+            sigaction=e['sigaction'],
+            flags=e['flags'],
+            restorer=e['restorer'],
+            mask=e['mask'],
+            compat_sigaction= e["compat_sigaction"]
+        )
+        for e in task_core['sigactions']
+    ]
 
 
 def _parse_task_core(core_item):
@@ -171,7 +171,8 @@ def _parse_task_core(core_item):
         cg_set=tc['cg_set'],
         signals_s=tc['signals_s'],
         loginuid=tc['loginuid'],
-        oom_score_adj=tc['oom_score_adj']
+        oom_score_adj=tc['oom_score_adj'],
+        sigactions=_parse_sigacts(tc)
     )
 
 
@@ -228,9 +229,6 @@ def _parse_one_process(process_item, source_path, image_type):
     pagemap_item = _load_item(source_path, "pagemap-{}".format(pid), image_type)
     pagemap = _parse_pagemap(pagemap_item)
 
-    sigacts_item = _load_item(source_path, "sigacts-{}".format(pid), image_type)
-    sigacts = _parse_sigacts(sigacts_item)
-
     fs_item = _load_item(source_path, "fs-{}".format(pid), image_type)
     fs_props = _parse_fs(fs_item)
 
@@ -246,8 +244,7 @@ def _parse_one_process(process_item, source_path, image_type):
                           vmas=p_vmas,
                           vm_info=p_vminfo,
                           page_map=pagemap,
-                          fs=fs_props,
-                          sigact=sigacts)
+                          fs=fs_props)
 
 
 def _parse_reg_files(reg_files_item):

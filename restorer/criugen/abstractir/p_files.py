@@ -56,9 +56,9 @@ def _construct_pipe_concepts(pipe_files):
     # creating pipe tuples, which contain read and write end pipe files
     for pf in pipe_files:
         read_write_tuple = pipe_resources.setdefault(pf.pipe_id, [None, None])
-        if pf.flags & crconstants.FILE_RDONLY_FLAG > 0:
+        if pf.flags == crconstants.FILE_RDONLY_FLAG:
             read_write_tuple[0] = pf
-        elif pf.flags & crconstants.FILE_WRONLY_FLAG > 0:
+        elif pf.flags == crconstants.FILE_WRONLY_FLAG:
             read_write_tuple[1] = pf
         else:
             raise RuntimeError("Bad pipe file (not RDONLY or WRONLY")

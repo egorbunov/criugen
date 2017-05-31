@@ -24,12 +24,10 @@ def init_internal_state_resources(process_tree, application):
         fs_props = FSPropsConcept(p.fs)
         process_core = ProcessInternalsConcept(p.core)
         thread_cores = [ProcessInternalsConcept(t_core) for t_core in p.thread_cores]
-        sigacts = ProcessInternalsConcept(p.sigact)
 
         process_concept.add_final_resource(page_map, resource_handles.NO_HANDLE)
         process_concept.add_final_resource(vm_info, resource_handles.NO_HANDLE)
         process_concept.add_final_resource(fs_props, resource_handles.NO_HANDLE)
-        process_concept.add_final_resource(sigacts, resource_handles.NO_HANDLE)
         process_concept.add_final_resource(process_core, resource_handles.NO_HANDLE)
         for thread_core in thread_cores:
             process_concept.add_final_resource(thread_core, resource_handles.NO_HANDLE)

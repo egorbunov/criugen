@@ -24,7 +24,6 @@ class Process(Resource):
     ids = """various ids for process like it's namespace ids"""
     page_map = """map of pages to fill in target process VM"""
     fs = """file system properties"""
-    sigact = """signal actions (signal handling) stuff"""
 
 
 class ThreadCore(Resource):
@@ -54,6 +53,7 @@ class ProcessCore(Resource):
     signals_s = "TODO"
     loginuid = "TODO"
     oom_score_adj = "TODO"
+    sigactions = """signal actions (signal handling) stuff"""
 
 
 class File(Resource):
@@ -140,6 +140,7 @@ class SignalAction(Resource):
     flags = """flags"""
     restorer = """restorer"""
     mask = """signal mask"""
+    compat_sigaction = "TODO"
 
 
 class FSProps(Resource):

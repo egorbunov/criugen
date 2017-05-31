@@ -1,5 +1,5 @@
 from model import crdata
-from abstractir import actions_gen
+from abstractir import actions_program
 
 
 def generate_program(app):
@@ -11,4 +11,4 @@ def generate_program(app):
     """
 
     # generating high-order action list
-    actions = actions_gen.generate_actions(app)
+    actions = actions_program.generate_actions_list(app)
