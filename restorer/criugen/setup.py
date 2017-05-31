@@ -2,7 +2,7 @@
 
 from setuptools import setup, find_packages
 
-with open('README.rst') as f:
+with open('README.md') as f:
     readme = f.read()
 
 with open('LICENSE') as f:
@@ -11,13 +11,13 @@ with open('LICENSE') as f:
 setup(
     name='criugen',
     version='0.1.0',
-    description='Process restoration commands generator and tools',
+    description='Another approach for process tree restoration',
     long_description=readme,
     author='Egor Gorbunov',
     author_email='egor-mailbox@ya.ru',
     url='https://github.com/egorbunov/v2criu/restorer/criugen',
     install_requires=[
-        'crit'
+        'crit'  # there is no such pip module, but can be installed from CRIU sources
     ],
     license=license_,
     packages=find_packages(exclude=('tests', 'docs'))
