@@ -12,3 +12,4 @@ def generate_program(app):
 
     # generating high-order action list
     actions = actions_program.generate_actions_list(app)
+    return []
