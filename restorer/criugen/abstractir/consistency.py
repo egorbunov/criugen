@@ -71,5 +71,6 @@ def _check_vmas(vma1, vma2):
         return True
     return False
 
+
 def _check_fd_handled_resources(r1, h1, r2, h2):
     return get_int_from_fd_handle(h1) != get_int_from_fd_handle(h2)
