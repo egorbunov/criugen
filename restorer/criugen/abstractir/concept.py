@@ -4,6 +4,7 @@
 import model.crdata as crdata
 from pstree import ProcessTreeConcept
 from process_concept import ProcessConcept
+import closure
 import util
 import p_files
 import p_private
@@ -12,7 +13,23 @@ import p_ids
 from resource_indexer import ResourcesIndexer
 
 
-def init_conceptual_process_tree(app):
+def build_concept_process_tree(app):
+    """ Analyses given application and build process tree filled
+    with resources (ResourceConcept) and all that stuff, which we
+    need to create actions graph
+    :param app: application
+    :type app: crdata.Application
+    :return: process tree
+    :rtype: ProcessTreeConcept
+    """
+
+    process_tree = _init_conceptual_process_tree(app)
+    closure.perform_process_tree_closure(process_tree)
+
+    return process_tree
+
+
+def _init_conceptual_process_tree(app):
     """ Reads application resources and initializes conceptual
     processes and resources from them. Returns a pair:
     * process tree, which contains of processes models (concepts) filled 

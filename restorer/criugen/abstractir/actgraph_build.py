@@ -3,6 +3,8 @@
 
 import functools
 
+import model.crdata as crdata
+
 from pstree import ProcessTreeConcept
 from process_concept import ProcessConcept
 from actions import *
@@ -10,19 +12,19 @@ from pyutils.graph import Graph
 import actions_gen
 from actions_index import ActionsIndex
 import consistency
+import concept
 
 
-def build_actions_graph(process_tree):
-    """ Performs analysis of given process concepts tree and builds up
-    a graph of actions, which represents restoration process in terms
-    of abstract actions
+def build_actions_graph(application):
+    """ Performs analysis of given application and builds an abstract actions
+    graph, which describes restoration process in terms of actions (see actions.py)
 
-    :param process_tree: process tree concept, which contains all processes
-           which are filled with resources concepts
-    :type process_tree: ProcessTreeConcept
+    :param application: application to analyse
+    :type application: crdata.Application
     :return: actions graph
     """
 
+    process_tree = concept.build_concept_process_tree(application)
     action_index, action_graph = _init_actions_graph_and_index(process_tree)
     _build_all_precedence_edges(process_tree, action_index, action_graph)
     del action_index

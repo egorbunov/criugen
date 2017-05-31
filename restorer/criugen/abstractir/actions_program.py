@@ -1,10 +1,8 @@
 """ Public interface for action list generation
 """
 
-import model.crdata as crdata
-import concept
-import closure
 import actgraph_build
+import model.crdata as crdata
 
 
 def generate_actions_list(application):
@@ -16,8 +14,7 @@ def generate_actions_list(application):
     :return: list of high-order actions
     """
 
-    process_tree = concept.init_conceptual_process_tree(application)
-    closure.perform_process_tree_closure(process_tree)
-    actgraph_build.build_actions_graph(process_tree)
+    actgraph_build.build_actions_graph(application)
+    # todo: sort graph
 
     return []
