@@ -7,6 +7,7 @@ import argparse
 from model import loader
 from model.crdata import Application
 from dumpbrowse import print_utils
+from abstractir.resource_concepts import *
 
 PROGRAM_NAME = "criugen.py"
 
@@ -69,6 +70,20 @@ def build_parsers():
     graph_command_parser = argparse.ArgumentParser(prog="{} {}".format(PROGRAM_NAME, generate_graph_command),
                                                    description='Actions graph visualization command',
                                                    parents=[root_parser])
+    graph_command_parser.add_argument('--skip_vmas', help="Skip all actions with Virtual Memory Area resources",
+                                      default=False, action='store_true')
+    graph_command_parser.add_argument('--skip_regfiles', help="Skip all actions with Regular File resources",
+                                      default=False, action='store_true')
+    graph_command_parser.add_argument('--skip_pipes', help="Skip all actions with Pipes resources",
+                                      default=False, action='store_true')
+    graph_command_parser.add_argument('--skip_groups', help="Skip all actions with Group resources",
+                                      default=False, action='store_true')
+    graph_command_parser.add_argument('--skip_sessions', help="Skip all actions with Session resources",
+                                      default=False, action='store_true')
+    graph_command_parser.add_argument('--skip_private', help="Skip all actions with private resources",
+                                      default=False, action='store_true')
+    graph_command_parser.add_argument('--skip_shmem', help="Skip all actions with Shared Mem resources",
+                                      default=False, action='store_true')
     graph_command_parser.add_argument('output_file', help="output svg file path")
 
     return command_parser, {generate_program_command: (gen_program_cmd_parse, generate_final_commands),
@@ -123,10 +138,29 @@ def generate_actions_graph(application, args):
     """
     :type application: Application
     """
+    from abstractir.concept import build_concept_process_tree
     from abstractir.actgraph_build import build_actions_graph
     from visualize.core import render_actions_graph_svg
 
-    graph = build_actions_graph(application)
+    process_tree = build_concept_process_tree(application)
+
+    resource_types_to_skip = []
+    if args.skip_vmas:
+        resource_types_to_skip.append(VMAConcept)
+    if args.skip_regfiles:
+        resource_types_to_skip.append(RegularFileConcept)
+    if args.skip_pipes:
+        resource_types_to_skip.append(PipeConcept)
+    if args.skip_groups:
+        resource_types_to_skip.append(ProcessGroupConcept)
+    if args.skip_sessions:
+        resource_types_to_skip.append(ProcessSessionConcept)
+    if args.skip_private:
+        resource_types_to_skip.append(ProcessInternalsConcept)
+    if args.skip_shmem:
+        resource_types_to_skip.append(SharedMemConcept)
+
+    graph = build_actions_graph(process_tree, tuple(resource_types_to_skip))
     render_actions_graph_svg(graph, args.output_file)
 
 

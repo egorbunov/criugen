@@ -3,6 +3,7 @@
 
 import actgraph_build
 import model.crdata as crdata
+import concept
 
 
 def generate_actions_list(application):
@@ -14,7 +15,8 @@ def generate_actions_list(application):
     :return: list of high-order actions
     """
 
-    actgraph_build.build_actions_graph(application)
+    process_tree = concept.build_concept_process_tree(application)
+    actgraph_build.build_actions_graph(process_tree)
     # todo: sort graph
 
     return []

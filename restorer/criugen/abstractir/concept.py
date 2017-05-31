@@ -4,6 +4,7 @@
 import model.crdata as crdata
 from pstree import ProcessTreeConcept
 from process_concept import ProcessConcept
+from resource_concepts import ResourceConcept
 import closure
 import util
 import p_files

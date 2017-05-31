@@ -3,31 +3,47 @@
 
 import functools
 
-import model.crdata as crdata
-
 from pstree import ProcessTreeConcept
 from process_concept import ProcessConcept
 from actions import *
-from pyutils.graph import Graph
+from pyutils.graph import DirectedGraph
 import actions_gen
 from actions_index import ActionsIndex
 import consistency
-import concept
 
 
-def build_actions_graph(application):
-    """ Performs analysis of given application and builds an abstract actions
-    graph, which describes restoration process in terms of actions (see actions.py)
+def build_actions_graph(process_tree, resource_types_to_skip=()):
+    """ Performs analysis of given process concepts tree and builds up
+    a graph of actions, which represents restoration process in terms
+    of abstract actions
 
-    :param application: application to analyse
-    :type application: crdata.Application
+    :param process_tree: process tree concept, which contains all processes
+           which are filled with resources concepts
+    :type process_tree: ProcessTreeConcept
+    :param resource_types_to_skip: tuple of resources types, actions with which
+           will be skipped; tuple must contain
+           types, which are subtypes of ResourceConcept
+    :type resource_types_to_skip: tuple[type]
     :return: actions graph
     """
 
-    process_tree = concept.build_concept_process_tree(application)
     action_index, action_graph = _init_actions_graph_and_index(process_tree)
     _build_all_precedence_edges(process_tree, action_index, action_graph)
     del action_index
+
+    # removing to skip vertices =)
+    # TODO: it is better to remove before adding edges, but...more safe because
+    # TODO: action index is deleted not needed already :D
+    def is_act_with_resource_types(act, r_types):
+        if isinstance(act, (ShareResourceAction, CreateResourceAction, RemoveResourceAction)):
+            return isinstance(act.resource, r_types)
+        return False
+
+    if resource_types_to_skip:
+        to_delete = set(v for v in action_graph.vertices_iter
+                        if is_act_with_resource_types(v, resource_types_to_skip))
+        if len(to_delete) > 0:
+            action_graph.remove_vertices(set(to_delete))
 
     return action_graph
 
@@ -38,12 +54,12 @@ def _init_actions_graph_and_index(process_tree):
 
     :type process_tree: ProcessTreeConcept
     :return: pair: graph and actions index
-    :rtype: tuple[ActionsIndex, Graph]
+    :rtype: tuple[ActionsIndex, DirectedGraph]
     """
 
     actions_generator = actions_gen.gen_actions_vertices(process_tree)
     action_index = ActionsIndex()
-    action_graph = Graph()
+    action_graph = DirectedGraph()
 
     for action in actions_generator:
         action_index.add_action(action)
@@ -56,7 +72,7 @@ def _build_all_precedence_edges(process_tree, actions_index, actions_graph):
     """
     :type process_tree: ProcessTreeConcept
     :type actions_index: ActionsIndex
-    :type actions_graph: Graph
+    :type actions_graph: DirectedGraph
     """
 
     _ensure_fork_before_act(actions_index, actions_graph)
@@ -74,13 +90,12 @@ def _add_precedence_edges_from_to(actions_from, actions_to, actions_graph):
     :param actions_from: actions, from which edges will go
     :param actions_to: actions, to which edges will go
     :param actions_graph: graph of actions, where to add edges
-    :type actions_graph: Graph
+    :type actions_graph: DirectedGraph
     """
 
     for v in actions_from:
         for u in actions_to:
             actions_graph.add_edge(v, u)
-
 
 
 def _ensure_fork_before_act(actions_index, actions_graph):
@@ -162,7 +177,7 @@ def _ensure_inherited_resource_created_before_fork(actions_index, actions_graph)
 
     Complexity: (Create-acts-cnt) * (Process-cnt)
 
-    :type actions_graph: Graph
+    :type actions_graph: DirectedGraph
     :type actions_index: ActionsIndex
     """
 
@@ -205,7 +220,7 @@ def _ensure_dependencies_created_before_used(actions_index, actions_graph):
     Complexity: (Create-act-cnt) * (Max-resource-dependency-cnt) * (Max-per-process-act-cnt + Max-handle-cnt)
 
     :type actions_index: ActionsIndex
-    :type actions_graph: Graph
+    :type actions_graph: DirectedGraph
     """
 
     for cr_act in actions_index.create_actions:
@@ -298,7 +313,7 @@ def _ensure_consistency(process_tree, actions_index, actions_graph):
 
     :type process_tree: ProcessTreeConcept
     :type actions_index: ActionsIndex
-    :type actions_graph: Graph
+    :type actions_graph: DirectedGraph
     """
 
     for process in process_tree.processes:
@@ -312,7 +327,7 @@ def _ensure_consistency_one_process(process, actions_index, actions_graph):
 
     :type process: ProcessConcept
     :type actions_index: ActionsIndex
-    :type actions_graph: Graph
+    :type actions_graph: DirectedGraph
     """
 
     resource_pairs = list(process.iter_all_resource_handle_pairs())
@@ -327,7 +342,7 @@ def _ensure_consistency_one_process(process, actions_index, actions_graph):
             break
 
         remove_prev = actions_index.resource_remove_action(process, r_from, h_from)
-        for j, (r_to, h_to) in enumerate(resource_pairs[i+1:]):
+        for j, (r_to, h_to) in enumerate(resource_pairs[i + 1:]):
             if consistency.can_exist_together(r_from, h_from, r_to, h_to):
                 continue
 

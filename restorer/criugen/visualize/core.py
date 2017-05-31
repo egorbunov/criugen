@@ -1,6 +1,6 @@
 import graphviz as gv
 
-from pyutils.graph import Graph
+from pyutils.graph import DirectedGraph
 from abstractir.actions import *
 import labels
 
@@ -9,7 +9,7 @@ def render_actions_graph_svg(actions_graph, output_file):
     """ Renders actions graph to svg
     :param actions_graph: actions graph
     :param output_file: file to write svg (svg extension is not obligatory)
-    :type actions_graph: Graph
+    :type actions_graph: DirectedGraph
     """
     gv_graph = _generate_graphviz_graph(actions_graph)
     gv_graph.render(filename=output_file)

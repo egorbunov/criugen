@@ -1,7 +1,7 @@
 from process_concept import ProcessConcept
 from resource_indexer import ResourcesIndexer
 import util
-from pyutils.graph import Graph
+from pyutils.graph import DirectedGraph
 
 
 class ProcessTreeConcept(object):
@@ -129,7 +129,7 @@ class ProcessTreeConcept(object):
         return process_depths_map
 
     def _construct_process_graph(self):
-        process_graph = Graph()
+        process_graph = DirectedGraph()
 
         for p in self.processes:
             process_graph.add_vertex(p)

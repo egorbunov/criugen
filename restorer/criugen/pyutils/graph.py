@@ -1,17 +1,17 @@
 import func
 
 
-class Graph(object):
+class DirectedGraph(object):
     class NoSuchVertex(Exception):
         def __init__(self, vertex):
-            super(Graph.NoSuchVertex, self).__init__("{}".format(vertex))
+            super(DirectedGraph.NoSuchVertex, self).__init__("{}".format(vertex))
 
     class VertexAlreadyExists(Exception):
         def __init__(self, vertex):
-            super(Graph.VertexAlreadyExists, self).__init__("{}".format(vertex))
+            super(DirectedGraph.VertexAlreadyExists, self).__init__("{}".format(vertex))
 
     def __init__(self):
-        self._adjacency_list = {}  # vertex --> list[vertex]
+        self._adjacency_list = {}  # vertex --> set[vertex]
 
     @property
     def vertices_iter(self):
@@ -19,25 +19,41 @@ class Graph(object):
 
     @property
     def edges_iter(self):
-        yield self._adjacency_list.iteritems()
+        for v in self._adjacency_list:
+            for u in self._adjacency_list[v]:
+                yield (v, u)
 
     def add_edge(self, v_from, v_to):
         if v_from not in self._adjacency_list:
-            raise Graph.NoSuchVertex(v_from)
+            raise DirectedGraph.NoSuchVertex(v_from)
         if v_to not in self._adjacency_list:
-            raise Graph.NoSuchVertex(v_to)
+            raise DirectedGraph.NoSuchVertex(v_to)
 
-        self._adjacency_list[v_from].append(v_to)
+        self._adjacency_list[v_from].add(v_to)
 
     def add_vertex(self, vertex):
         if vertex in self._adjacency_list:
-            raise Graph.VertexAlreadyExists(vertex)
+            raise DirectedGraph.VertexAlreadyExists(vertex)
 
-        self._adjacency_list[vertex] = []
+        self._adjacency_list[vertex] = set()
+
+    def remove_vertices(self, vertices):
+        """ Removes given vertices set from graph; all involved
+        edges are removed too;
+
+        Warning: that is time-consuming operation: O(E)
+
+        :param vertices: vertices set
+        """
+        for v in vertices:
+            del self._adjacency_list[v]
+
+        for v in self._adjacency_list.keys():
+            self._adjacency_list[v] -= vertices  # set difference
 
     def vertex_neighbours(self, vertex):
         if vertex not in self._adjacency_list:
-            raise Graph.NoSuchVertex(vertex)
+            raise DirectedGraph.NoSuchVertex(vertex)
 
         return self._adjacency_list[vertex]
 
@@ -59,7 +75,7 @@ class Graph(object):
         :type post_visit: (vertex: object) -> ...
         """
         if v_from not in self._adjacency_list:
-            raise Graph.NoSuchVertex(v_from)
+            raise DirectedGraph.NoSuchVertex(v_from)
 
         visited_map = {v: False for v in self.vertices_iter}
         self._dfs(v_from, pre_visit, post_visit, visited_map)
@@ -69,7 +85,6 @@ class Graph(object):
         (all graph components). Starting vertex is not specified
         """
         pass
-
 
     def _dfs(self, cur_v, pre_visit, post_visit, visited_map):
         pre_visit(cur_v)

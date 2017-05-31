@@ -1,7 +1,7 @@
-from resource_concepts import ResourceConcept
 from handle_factory import make_handle_factories_map_for_process, HandleFactory
 from itertools import chain
 from resource_listener import ProcessResourceListener
+import resource_concepts
 
 
 class ProcessConcept(object):
@@ -44,6 +44,8 @@ class ProcessConcept(object):
 
     @property
     def ppid(self):
+        """ Parent pid
+        """
         return self._parent_pid
 
     def add_final_resource(self, resource, handle):
@@ -54,6 +56,9 @@ class ProcessConcept(object):
         self._add_resource_to_dict(self._final_resources, resource, handle)
 
     def add_tmp_resource(self, resource, handle):
+        """ Adds resource just like `add_final_resource`, but marks internally
+        that this (resource, handle) pair is temporary to the process
+        """
         self._add_resource_to_dict(self._tmp_resources, resource, handle)
 
     def add_tmp_resource_with_auto_handle(self, resource, handle_type):
@@ -62,7 +67,7 @@ class ProcessConcept(object):
         a given type
         
         :param resource: resource to add
-        :type resource: ResourceConcept
+        :type resource: resource_concepts.ResourceConcept
         :param handle_type: handle type to generate
         :type handle_type: type
         """
@@ -71,7 +76,7 @@ class ProcessConcept(object):
 
     def iter_all_resources(self):
         """
-        :rtype: collections.Iterable[ResourceConcept]
+        :rtype: collections.Iterable[resource_concepts.ResourceConcept]
         """
         return chain(self._final_resources.iterkeys(), self._tmp_resources.iterkeys())
 
@@ -92,6 +97,8 @@ class ProcessConcept(object):
                 yield (r, h)
 
     def iter_tmp_resources(self):
+        """ returns iterator other temporary resources
+        """
         return self._tmp_resources.iterkeys()
 
     def get_final_handles(self, resource):
@@ -115,24 +122,35 @@ class ProcessConcept(object):
         return (h for h in self.iter_all_handles(resource) if type(h) == handle_type)
 
     def iter_all_handles(self, resource):
+        """ Returns iterator through all handles, which point to the resource
+        """
         return chain(self.get_final_handles(resource), self.get_tmp_handles(resource))
 
     def has_resource(self, resource):
+        """ Returns true in case given resource is handled by this process (at any handle)
+        """
         return resource in self._final_resources or resource in self._tmp_resources
 
     def has_resource_at_handle_type(self, resource, handle_type):
+        """ Returns true if (resource, handle) pair is in this process and
+        type(handle) == handle_type
+        """
         for h in self.iter_all_handles(resource):
             if type(h) == handle_type:
                 return True
         return False
 
     def has_resource_at_handle(self, resource, handle):
+        """ Returns True in case (resource, handle) is in that process
+        """
         for h in self.iter_all_handles(resource):
             if h == handle:
                 return True
         return False
 
     def is_tmp_resource(self, resource, handle):
+        """ Returns True is (resource, handle) is in the process and this pair is temporary
+        """
         return resource in self._tmp_resources and handle in self._tmp_resources[resource]
 
     def __repr__(self):
