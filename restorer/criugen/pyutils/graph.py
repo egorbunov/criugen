@@ -14,6 +14,10 @@ class DirectedGraph(object):
         self._adjacency_list = {}  # vertex --> set[vertex]
 
     @property
+    def vertex_num(self):
+        return len(self._adjacency_list)
+
+    @property
     def vertices_iter(self):
         return self._adjacency_list.iterkeys()
 
@@ -88,7 +92,7 @@ class DirectedGraph(object):
         for v in is_visited.keys():
             if is_visited[v]:
                 continue
-            self._dfs(v, pre_visit, post_visit)
+            self._dfs(v, pre_visit, post_visit, is_visited)
 
     def _dfs(self, cur_v, pre_visit, post_visit, visited_map):
         pre_visit(cur_v)
@@ -101,3 +105,40 @@ class DirectedGraph(object):
             self._dfs(v, pre_visit, post_visit, visited_map)
 
         post_visit(cur_v)
+
+
+def topological_sort(graph):
+    """ Sorts graph topologically
+
+    :param graph: graph to sort
+    :type graph: DirectedGraph
+    :return: list of vertices sorted topologically or exception is
+             raised in case graph is not acyclic
+    """
+    sorted_actions = []
+
+    no_color = 0
+    entered_color = 1
+    exited_color = 2
+    vertex_color = {}
+
+    def pre_visit(vertex):
+        cur_color = vertex_color.setdefault(vertex, no_color)
+
+        if cur_color == entered_color:
+            # already entered there!
+            raise RuntimeError("Graph is not acyclic; Can't sort.")
+
+        if cur_color == exited_color:
+            # we are already traversed from this vertex, so we not entering it again
+            return
+
+        vertex_color[vertex] = entered_color
+
+    def post_visit(vertex):
+        sorted_actions.append(vertex)
+        vertex_color[vertex] = exited_color
+
+    graph.dfs(pre_visit, post_visit)
+
+    return reversed(sorted_actions)
