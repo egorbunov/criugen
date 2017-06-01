@@ -302,36 +302,6 @@ class VMAConcept(ResourceConcept):
         return self.payload.__repr__()
 
 
-class FSPropsConcept(ResourceConcept):
-    """ File system process properties like root dir,
-    working dir and so on
-    """
-
-    @property
-    def payload_type(self):
-        return crdata.FSProps
-
-    @property
-    def handle_types(self):
-        return frozenset([type(resource_handles.NO_HANDLE)])
-
-    @property
-    def is_inherited(self):
-        return False
-
-    @property
-    def is_sharable(self):
-        return False
-
-    @property
-    def minimalistic_repr(self):
-        fs = self.payload  # type: crdata.FSProps
-        return "FileSys({}, {}, {})".format(fs.cwd_id, fs.root_id, fs.umask)
-
-    def possible_creators(self, processes):
-        return processes
-
-
 class ProcessInternalsConcept(ResourceConcept):
     """ Internal process stuff like registers etc (TODO: reconsider)
     """
