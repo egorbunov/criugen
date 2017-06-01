@@ -2,46 +2,63 @@ import graphviz as gv
 
 from pyutils.graph import DirectedGraph
 from abstractir.actions import *
-import labels
+import abstractir.actions_labels as labels
 import gvboost
 from pyutils.func import update_dict
 
 
 def render_actions_graph(actions_graph, output_file, type='svg', view=False, layout='LR', do_cluster=False):
     """ Renders actions graph to
-    :param view:
+
     :param actions_graph: actions graph
-    :param output_file: file to write svg (svg extension is not obligatory)
+    :param output_file: file to write drawing
     :param type: type of output rendered image
-    :param view: flag, if set to True, then graph will be shown immediately
+    :param view: is set, then drawing is shown immediately after graph generation
+    :param layout: graphviz graph layout: ['LR', 'TB' ,...]
+    :param do_cluster: adds actions clusters by action executor
     :type actions_graph: DirectedGraph
     """
-    gv_graph = _generate_graphviz_graph(actions_graph,
-                                        g_format=type,
-                                        rankdir_layout=layout,
-                                        do_cluster=do_cluster)
+
+    gv_graph = _init_graphviz_graph(g_format=type, rankdir_layout=layout)
+    _fill_graphviz_graph(actions_graph,
+                         gv_graph,
+                         do_cluster=do_cluster)
     gv_graph.render(filename=output_file)
     if view:
         gv_graph.view()
 
 
-def _generate_graphviz_graph(actions_graph, g_format='svg', rankdir_layout='LR', do_cluster=False):
-    """
+def render_actions_list(actions_list, output_file, type='svg', view=False, layout='LR'):
+    """ Renders list of actions as a graph =) without edges
 
-    :param actions_graph: our DirectedGraph with actions
-    :param g_format: graphviz graph format
-    :return:
+    :param actions_list: list of actions
+    :param output_file: file to write drawing
+    :param type: type of output drawing
+    :param view: flag, if set to True, then graph will be shown immediately
+    :param layout: graphviz graph layout: ['LR', 'TB' ,...]
     """
+    gv_graph = _init_graphviz_graph(g_format=type, rankdir_layout=layout)
+    _add_actions_vertices_to_graph(gv_graph, actions_list, do_cluster=False)
+
+    gv_graph.render(filename=output_file)
+    if view:
+        gv_graph.view()
+
+
+def _init_graphviz_graph(g_format='svg', rankdir_layout='LR'):
     graph = gv.Digraph(format=g_format)
     graph.attr(rankdir=rankdir_layout)
     gvboost.apply_styles(graph, _get_common_styles())
+    return graph
 
-    node_ids = _add_actions_vertices_to_graph(graph, actions_graph.vertices_iter, do_cluster)
+
+def _fill_graphviz_graph(actions_graph, gv_graph, do_cluster=False):
+    node_ids = _add_actions_vertices_to_graph(gv_graph, actions_graph.vertices_iter, do_cluster)
 
     for u, v in actions_graph.edges_iter:
-        graph.edge(node_ids[u], node_ids[v])
+        gv_graph.edge(node_ids[u], node_ids[v])
 
-    return graph
+    return gv_graph
 
 
 def _add_actions_vertices_to_graph(graph, vertices, do_cluster=False):
@@ -111,7 +128,7 @@ def _get_action_node_style(action):
     if isinstance(action, CreateResourceAction):
         return {
             'node': update_dict({
-                'fillcolor': '#f9cbc5'
+                'fillcolor': '#f9e47f'
             }, common_node_style)
         }
     if isinstance(action, RemoveResourceAction):

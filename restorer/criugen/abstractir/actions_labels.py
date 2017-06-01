@@ -1,8 +1,8 @@
 """ Action nodes labels
 """
 
-from abstractir import actions
-from abstractir import resource_concepts as rc
+import actions
+import resource_concepts as rc
 from model import crdata
 
 

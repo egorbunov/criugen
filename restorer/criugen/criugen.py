@@ -25,9 +25,13 @@ def main(args):
 
     # each command has obligatory argument
     dump_dir = args.dump_dir
+    is_json_img = args.json_img
 
     # loading application, which is needed by every command
-    application = loader.load_from_imgs(dump_dir)
+    if is_json_img:
+        application = loader.load_from_jsons(dump_dir)
+    else:
+        application = loader.load_from_imgs(dump_dir)
 
     # invoking command-special processor
     processor_callback(application, args, cmd_parser)
@@ -48,6 +52,8 @@ def build_parsers():
     root_parser = argparse.ArgumentParser(description='Process tree restoration program generator',
                                           add_help=False)
     root_parser.add_argument('dump_dir', help="path to process dump images directory")
+    root_parser.add_argument('--json_img', help="if set, then program parses process dump as json files",
+                             default=False, action='store_true')
 
     # program command parser
     gen_program_cmd_parse = argparse.ArgumentParser(prog="{} {}".format(PROGRAM_NAME, generate_program_command),
@@ -80,7 +86,8 @@ def build_parsers():
     graph_command_parser.add_argument('--cluster', help="If set, then actions are clustered by executing process",
                                       default=False, action='store_true')
     graph_command_parser.add_argument('--sorted', help="If set, then actual actions list is drawn, as it would "
-                                                       "be executed by abstract process-restore machine =)")
+                                                       "be executed by abstract process-restore machine =)",
+                                      default=False, action='store_true')
     graph_command_parser.add_argument('--skip_vmas', help="Skip all actions with Virtual Memory Area resources",
                                       default=False, action='store_true')
     graph_command_parser.add_argument('--skip_regfiles', help="Skip all actions with Regular File resources",
@@ -151,7 +158,8 @@ def generate_actions_graph(application, args, parser):
     """
     from abstractir.concept import build_concept_process_tree
     from abstractir.actgraph_build import build_actions_graph
-    from visualize.core import render_actions_graph
+    from abstractir.actgraph_sort import sort_actions_graph
+    import visualize.core as viz
 
     process_tree = build_concept_process_tree(application)
 
@@ -176,8 +184,13 @@ def generate_actions_graph(application, args, parser):
 
     graph = build_actions_graph(process_tree, tuple(resource_types_to_skip))
 
-    render_actions_graph(graph, args.output_file, type=args.type, view=args.show,
-                         layout=args.layout, do_cluster=args.cluster)
+    if not args.sorted:
+        viz.render_actions_graph(graph, args.output_file, type=args.type, view=args.show,
+                                 layout=args.layout, do_cluster=args.cluster)
+    else:
+        sorted_actions = sort_actions_graph(graph)
+        viz.render_actions_list(sorted_actions, args.output_file, type=args.type, view=args.show,
+                                layout=args.layout)
 
 
 if __name__ == "__main__":

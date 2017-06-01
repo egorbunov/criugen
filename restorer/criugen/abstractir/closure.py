@@ -16,14 +16,14 @@ def perform_process_tree_closure(process_tree):
     These temporary resources are needed for easier action generations algorithms.
     They ensure, that processes states are "complete" to get all needed information
     for actions generation.
-    
+
     :param process_tree: process tree
     :type process_tree: ProcessTreeConcept
     """
-    # _make_creators_handle_the_resource_they_create(process_tree)
     _close_against_dependencies(process_tree)
     _close_against_inheritance(process_tree)
     _close_against_multi_handle_resources(process_tree)
+    _make_creators_handle_the_resource_they_create(process_tree)
 
 
 def _close_against_dependencies(process_tree):

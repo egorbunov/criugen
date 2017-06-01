@@ -3,7 +3,7 @@ Initialization of private process resource concepts; by private we mean not shar
 internal process state, vm info, page map
 """
 
-from resource_concepts import ProcessInternalsConcept, FSPropsConcept
+from resource_concepts import ProcessInternalsConcept
 from model import crdata
 from pstree import ProcessTreeConcept
 import resource_handles
@@ -21,7 +21,7 @@ def init_internal_state_resources(process_tree, application):
 
         page_map = ProcessInternalsConcept(p.page_map)
         vm_info = ProcessInternalsConcept(p.vm_info)
-        fs_props = FSPropsConcept(p.fs)
+        fs_props = ProcessInternalsConcept(p.fs)
         process_core = ProcessInternalsConcept(p.core)
         thread_cores = [ProcessInternalsConcept(t_core) for t_core in p.thread_cores]
 
