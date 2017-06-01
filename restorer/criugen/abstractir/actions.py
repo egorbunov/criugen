@@ -38,6 +38,8 @@ class RemoveResourceAction(DataClass):
 def get_action_executor(action):
     """ Returns process, which can be treated as action executor or
     at main actor =)
+
+    TODO: maybe make it as a virtual function =)
     """
     if isinstance(action, ForkProcessAction):
         return action.parent
@@ -45,3 +47,18 @@ def get_action_executor(action):
         return action.process
     if isinstance(action, ShareResourceAction):
         return action.process_from
+
+
+def get_resource_consumer_from_act(action):
+    """ Returns process, and resource pair, which is obtained by
+    that process as a result of an action
+
+    :rtype: tuple[ProcessConcept, tuple[ResourceConcept, list[object]]
+    """
+
+    if isinstance(action, CreateResourceAction):
+        return action.process, (action.resource, action.handles)
+    if isinstance(action, ShareResourceAction):
+        return action.process_to, (action.resource, [action.handle_to])
+
+    raise RuntimeError("Action does not produce a resource!")

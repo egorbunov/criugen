@@ -26,46 +26,67 @@ def build_actions_graph(process_tree, resource_types_to_skip=()):
     :type resource_types_to_skip: tuple[type]
     :return: actions graph
     """
+    actions_index = ActionsIndex()
+    actions_graph_proxy = ActionsFilteringGraph(resource_types_to_skip)
 
-    action_index, action_graph = _init_actions_graph_and_index(process_tree)
+    action_index, action_graph = _fill_actions_graph_and_index(process_tree,
+                                                               actions_index,
+                                                               actions_graph_proxy)
     _build_all_precedence_edges(process_tree, action_index, action_graph)
     del action_index
-
-    # removing to skip vertices =)
-    # TODO: it is better to remove before adding edges, but...more safe because
-    # TODO: action index is deleted not needed already :D
-    def is_act_with_resource_types(act, r_types):
-        if isinstance(act, (ShareResourceAction, CreateResourceAction, RemoveResourceAction)):
-            return isinstance(act.resource, r_types)
-        return False
-
-    if resource_types_to_skip:
-        to_delete = set(v for v in action_graph.vertices_iter
-                        if is_act_with_resource_types(v, resource_types_to_skip))
-        if len(to_delete) > 0:
-            action_graph.remove_vertices(set(to_delete))
 
     return action_graph
 
 
-def _init_actions_graph_and_index(process_tree):
+class ActionsFilteringGraph(DirectedGraph):
+    """ This class is a class, which is used to build a graph, it
+    has ability to filter vertices by it's type; This is very helpful
+    in case we want to look at the graph manually.
+    """
+    def __init__(self, vertex_filter_type):
+        """
+        :param vertex_filter_type: tuple of types of actions to be filtered
+        """
+        super(ActionsFilteringGraph, self).__init__()
+        self._filter_types = vertex_filter_type
+
+    def add_vertex(self, vertex):
+        if self._is_act_with_resource_types(vertex, self._filter_types):
+            return
+        super(ActionsFilteringGraph, self).add_vertex(vertex)
+
+    def add_edge(self, v_from, v_to):
+        if self._is_act_with_resource_types(v_from, self._filter_types) \
+                or self._is_act_with_resource_types(v_to, self._filter_types):
+            return
+        super(ActionsFilteringGraph, self).add_edge(v_from, v_to)
+
+    @staticmethod
+    def _is_act_with_resource_types(act, r_types):
+        if isinstance(act, (ShareResourceAction, CreateResourceAction, RemoveResourceAction)):
+            return isinstance(act.resource, r_types)
+        return False
+
+
+def _fill_actions_graph_and_index(process_tree, acts_index, acts_graph):
     """ Creates actions index and action graph without edges, but with all
     action vertices
 
+
     :type process_tree: ProcessTreeConcept
+    :type acts_index: ActionsIndex
+    :type acts_graph: DirectedGraph
     :return: pair: graph and actions index
     :rtype: tuple[ActionsIndex, DirectedGraph]
     """
 
     actions_generator = actions_gen.gen_actions_vertices(process_tree)
-    action_index = ActionsIndex()
-    action_graph = DirectedGraph()
 
     for action in actions_generator:
-        action_index.add_action(action)
-        action_graph.add_vertex(action)
+        acts_index.add_action(action)
+        acts_graph.add_vertex(action)
 
-    return action_index, action_graph
+    return acts_index, acts_graph
 
 
 def _build_all_precedence_edges(process_tree, actions_index, actions_graph):
@@ -76,8 +97,8 @@ def _build_all_precedence_edges(process_tree, actions_index, actions_graph):
     """
 
     _ensure_fork_before_act(actions_index, actions_graph)
-    _ensure_resource_created_before_used(process_tree, actions_index, actions_graph)
-    _ensure_resource_removed_after_used(process_tree, actions_index, actions_graph)
+    _ensure_resource_created_before_used(actions_index, actions_graph)
+    _ensure_resource_removed_after_used(actions_index, actions_graph)
     _ensure_inherited_resource_created_before_fork(actions_index, actions_graph)
     _ensure_dependencies_created_before_used(actions_index, actions_graph)
     _ensure_consistency(process_tree, actions_index, actions_graph)
@@ -113,31 +134,24 @@ def _ensure_fork_before_act(actions_index, actions_graph):
         _add_precedence_edges_from_to([fa], actions, actions_graph)
 
 
-def _ensure_resource_created_before_used(process_tree, actions_index, actions_graph):
+def _ensure_resource_created_before_used(actions_index, actions_graph):
     """ Each (resource, handle) pair inside each process has corresponding action `cr_r`,
     which is responsible for creation of that pair inside a process; But also there
     are actions, which rely on that (resource, handle) is already created; So this
     function builds edges from action `cr_r` to these actions
 
-    Complexity: (Process-cnt) * (Tmp-resource-cnt) * (Max-handle-cnt) * (Max-actions-per-process)
+    Complexity: (Actions number) * (...)
 
     """
 
-    for process in process_tree.processes:
-        _ensure_resource_created_before_used_one_proc(process, actions_index, actions_graph)
+    for obtain_act in actions_index.obtain_actions:
+        consumer, (r, hs) = get_resource_consumer_from_act(obtain_act)
+        for handle in hs:
+            acts_with_resource = actions_index.process_actions_with_resource(consumer, r, handle)
+            _add_precedence_edges_from_to([obtain_act], acts_with_resource, actions_graph)
 
 
-def _ensure_resource_created_before_used_one_proc(process, actions_index, actions_graph):
-    """ Does the thing described in `_add_after_resource_creation_edges` doc comment,
-    but for only one process
-    """
-    for r, h in process.iter_all_resource_handle_pairs():
-        obtain_act = actions_index.process_obtain_resource_action(process, r, h)
-        acts_with_resource = actions_index.process_actions_with_resource(process, r, h)
-        _add_precedence_edges_from_to([obtain_act], acts_with_resource, actions_graph)
-
-
-def _ensure_resource_removed_after_used(process_tree, actions_index, actions_graph):
+def _ensure_resource_removed_after_used(actions_index, actions_graph):
     """ If remove resource action takes place in actions vertices then
     we need to put all other actions with resource before it in the final
     execution scenario;
@@ -147,19 +161,10 @@ def _ensure_resource_removed_after_used(process_tree, actions_index, actions_gra
     Complexity: (Process-cnt) * (Tmp-resource-cnt) * (Max-handle-cnt) * (Max-actions-per-process)
 
     """
-    for p in process_tree.processes:
-        _ensure_resource_removed_after_used_one_proc(p, actions_index, actions_graph)
+    for remove_act in actions_index.remove_actions:  # type: RemoveResourceAction
+        executor, r, h = remove_act.process, remove_act.resource, remove_act.handle
+        acts_with_resource = actions_index.process_actions_with_resource(executor, r, h)
 
-
-def _ensure_resource_removed_after_used_one_proc(process, actions_index, actions_graph):
-    """ Same as `_add_before_remove_resource_edges_one_proc` but for single process
-    :type process: ProcessConcept
-    """
-    for r, h in process.iter_tmp_resource_handle_pairs():
-        acts_with_resource = actions_index.process_actions_with_resource(process, r, h)
-        remove_act = next(a for a in acts_with_resource if isinstance(a, RemoveResourceAction))
-
-        # adding precedence edges FROM all acts except remove act TO remove act!
         _add_precedence_edges_from_to((a for a in acts_with_resource if a != remove_act),
                                       [remove_act],
                                       actions_graph)
@@ -342,7 +347,7 @@ def _ensure_consistency_one_process(process, actions_index, actions_graph):
             break
 
         remove_prev = actions_index.resource_remove_action(process, r_from, h_from)
-        for j, (r_to, h_to) in enumerate(resource_pairs[i + 1:]):
+        for r_to, h_to in resource_pairs[i + 1:]:
             if consistency.can_exist_together(r_from, h_from, r_to, h_to):
                 continue
 

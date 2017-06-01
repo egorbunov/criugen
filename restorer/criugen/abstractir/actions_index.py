@@ -11,6 +11,9 @@ class ActionsIndex(object):
         self._actions_using_process = {}
         self._fork_actions = []
         self._resource_create_acts = {}
+        self._remove_actions = []
+        self._obtain_actions = []
+        self._obtain_actions_by_proc = {}
 
     def add_action(self, action):
         if isinstance(action, ForkProcessAction):
@@ -24,18 +27,46 @@ class ActionsIndex(object):
             if action.resource in self._resource_create_acts:
                 raise RuntimeError("Duplicate create action for resource!")
             self._resource_create_acts[action.resource] = action
+            self._obtain_actions.append(action)
+            self._obtain_actions_by_proc.setdefault(get_resource_consumer_from_act(action)[0],
+                                                    []).append(action)
 
         elif isinstance(action, ShareResourceAction):
             self._actions_by_executor.setdefault(action.process_from, []).append(action)
             self._actions_using_process.setdefault(action.process_from, []).append(action)
             self._actions_using_process.setdefault(action.process_to, []).append(action)
+            self._obtain_actions.append(action)
+            self._obtain_actions_by_proc.setdefault(get_resource_consumer_from_act(action)[0],
+                                                    []).append(action)
 
         elif isinstance(action, RemoveResourceAction):
             self._actions_by_executor.setdefault(action.process, []).append(action)
             self._actions_using_process.setdefault(action.process, []).append(action)
+            self._remove_actions.append(action)
 
         else:
             raise RuntimeError("unknown action [{}]".format(action))
+
+    @property
+    def obtain_actions(self):
+        """
+        :return: list of actions, which are obtain actions; each action is either Create Action
+        or Share Action
+        """
+        return self._obtain_actions
+
+    @property
+    def remove_actions(self):
+        """
+        :return: list of all remove actions
+        """
+        return self._remove_actions
+
+    def obtain_actions_by_process(self, process):
+        """ Gets list of actions, which are obtain actions
+        for process specified
+        """
+        return self._obtain_actions_by_proc[process]
 
     def actions_by_executor(self, process):
         """ All actions, which are executed by process
@@ -78,7 +109,7 @@ class ActionsIndex(object):
         :type resource: ResourceConcept
         :param handle: handle to the resource, which obtain action is queued
         """
-        acts_to_check = self._actions_using_process[process]
+        acts_to_check = self._obtain_actions_by_proc[process]
         for a in acts_to_check:
             # resource action can only be Create action or Share action!
 
