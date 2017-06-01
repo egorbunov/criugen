@@ -4,6 +4,7 @@
 import actgraph_build
 import model.crdata as crdata
 import concept
+from pyutils import graph
 
 
 def generate_actions_list(application):
@@ -16,7 +17,7 @@ def generate_actions_list(application):
     """
 
     process_tree = concept.build_concept_process_tree(application)
-    actgraph_build.build_actions_graph(process_tree)
-    # todo: sort graph
+    act_graph = actgraph_build.build_actions_graph(process_tree)
+    sorted_acts = graph.topological_sort(act_graph)
 
-    return []
+    return sorted_acts
