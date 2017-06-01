@@ -317,6 +317,9 @@ def _load_processes(source_path, image_type):
     :return: list of parsed processes
     """
     processes_item = _load_item(source_path, "pstree", image_type)
+    if not processes_item:
+        raise RuntimeError("No pstree item! Probably bad image path [{}] specified.".format(source_path))
+
     return [_parse_one_process(e, source_path, image_type)
             for e in processes_item["entries"]]
 
@@ -326,6 +329,10 @@ def load(source_path, image_type):
     :param source_path: path to images
     :param image_type: image extension
     """
+    if not os.path.exists(source_path):
+        raise RuntimeError("Images path [{}] does not exists".format(source_path))
+    source_path = os.path.abspath(source_path)
+
     available_imgs = [os.path.splitext(os.path.basename(s))[0]
                       for s in glob.glob(os.path.join(source_path, "*.{}".format(image_type)))]
 
