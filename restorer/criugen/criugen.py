@@ -75,6 +75,11 @@ def build_parsers():
     graph_command_parser = argparse.ArgumentParser(prog="{} {}".format(PROGRAM_NAME, generate_graph_command),
                                                    description='Actions graph visualization command',
                                                    parents=[root_parser])
+    graph_command_parser.add_argument('-o', '--output_file', help="output graph drawing file path; if not specified,"
+                                                                  "graph will be saved in the current dir and showed"
+                                                                  "immediately (like when --show option is specified)"
+                                      ,
+                                      default=None)
     graph_command_parser.add_argument('--show', help="show graph immediately",
                                       default=False, action='store_true')
     graph_command_parser.add_argument('--type', help="output drawing type, possible = [svg, pdf, png]; "
@@ -102,7 +107,6 @@ def build_parsers():
                                       default=False, action='store_true')
     graph_command_parser.add_argument('--skip_shmem', help="Skip all actions with Shared Mem resources",
                                       default=False, action='store_true')
-    graph_command_parser.add_argument('output_file', help="output graph drawing file path")
 
     return command_parser, {generate_program_command: (gen_program_cmd_parse, generate_final_commands),
                             generate_actions_command: (actions_cmd_parser, generate_intermediate_actions),
@@ -185,7 +189,7 @@ def generate_actions_graph(application, args, parser):
     graph = build_actions_graph(process_tree, tuple(resource_types_to_skip))
 
     if not args.sorted:
-        viz.render_actions_graph(graph, args.output_file, type=args.type, view=args.show,
+        viz.render_actions_graph(graph, args.output_file, output_type=args.type, view=args.show,
                                  layout=args.layout, do_cluster=args.cluster)
     else:
         sorted_actions = sort_actions_graph(graph)

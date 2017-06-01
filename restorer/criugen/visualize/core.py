@@ -7,24 +7,26 @@ import gvboost
 from pyutils.func import update_dict
 
 
-def render_actions_graph(actions_graph, output_file, type='svg', view=False, layout='LR', do_cluster=False):
+def render_actions_graph(actions_graph,
+                         output_file=None, output_type='svg', view=False, layout='LR', do_cluster=False):
     """ Renders actions graph to
 
     :param actions_graph: actions graph
     :param output_file: file to write drawing
-    :param type: type of output rendered image
+    :param output_type: type of output rendered image
     :param view: is set, then drawing is shown immediately after graph generation
     :param layout: graphviz graph layout: ['LR', 'TB' ,...]
     :param do_cluster: adds actions clusters by action executor
     :type actions_graph: DirectedGraph
     """
 
-    gv_graph = _init_graphviz_graph(g_format=type, rankdir_layout=layout)
+    gv_graph = _init_graphviz_graph(g_format=output_type, rankdir_layout=layout)
     _fill_graphviz_graph(actions_graph,
                          gv_graph,
                          do_cluster=do_cluster)
-    gv_graph.render(filename=output_file)
-    if view:
+    if output_file:
+        gv_graph.render(filename=output_file)
+    if not output_file or view:
         gv_graph.view()
 
 
