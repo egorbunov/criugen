@@ -41,25 +41,30 @@ def build_parsers():
     generate_program_command = "program"
     generate_actions_command = "actions-ir"
     generate_graph_command = "actions-graph"
-    commands_list = [generate_program_command, generate_actions_command, generate_graph_command]
 
-    command_parser = argparse.ArgumentParser(description='')
+    command_parser = argparse.ArgumentParser(description='', formatter_class=argparse.RawTextHelpFormatter)
     command_parser.add_argument('command', default=generate_program_command,
-                                help="command to execute, possible values are: "
-                                     "{}".format(commands_list))
+                                help="Command to execute, possible values are: \n"
+                                     "    * program (default) -- generate final restorer program\n"
+                                     "    * actions-ir -- generate list of abstract intermediate actions\n"
+                                     "    * actions-graph -- render IR actions graph\n"
+                                     "\n"
+                                     "You can see help for each of any command:\n"
+                                     "    ./criugen.py <command> -h")
 
     # common parser
     root_parser = argparse.ArgumentParser(description='Process tree restoration program generator',
                                           add_help=False)
-    root_parser.add_argument('dump_dir', help="path to process dump images directory")
-    root_parser.add_argument('--json_img', help="if set, then program parses process dump as json files",
+    root_parser.add_argument('-d', '--dump_dir', help="Path to process dump images directory",
+                             required=True)
+    root_parser.add_argument('--json_img', help="If set, then program parses process dump as json files",
                              default=False, action='store_true')
 
     # program command parser
     gen_program_cmd_parse = argparse.ArgumentParser(prog="{} {}".format(PROGRAM_NAME, generate_program_command),
                                                     description='Generates final program for restorer-interpreter',
                                                     parents=[root_parser])
-    gen_program_cmd_parse.add_argument('-o', '--output_file', help="output json file with commands, "
+    gen_program_cmd_parse.add_argument('-o', '--output_file', help="Output json file with commands, "
                                                                    "if not specified program will be "
                                                                    "printed to stdout")
 
@@ -68,45 +73,48 @@ def build_parsers():
                                                  description='Generates intermediate program representation '
                                                              '-- list of abstract actions',
                                                  parents=[root_parser])
-    actions_cmd_parser.add_argument('-o', '--output_file', help="output json file with actions, "
+    actions_cmd_parser.add_argument('-o', '--output_file', help="Output json file with actions, "
                                                                 "if not specified actions are printed to stdout")
 
     # visualization command parser
     graph_command_parser = argparse.ArgumentParser(prog="{} {}".format(PROGRAM_NAME, generate_graph_command),
                                                    description='Actions graph visualization command',
-                                                   parents=[root_parser])
-    graph_command_parser.add_argument('-o', '--output_file', help="output graph drawing file path; if not specified,"
-                                                                  "graph will be saved in the current dir and showed"
+                                                   parents=[root_parser],
+                                                   formatter_class=argparse.RawTextHelpFormatter)
+    graph_command_parser.add_argument('-o', '--output_file', help="Output graph drawing file path; if not specified,\n"
+                                                                  "graph will be saved in the current dir and showed\n"
                                                                   "immediately (like when --show option is specified)"
                                       ,
                                       default=None)
-    graph_command_parser.add_argument('--show', help="show graph immediately",
+    graph_command_parser.add_argument('--show', help="Show graph immediately",
                                       default=False, action='store_true')
-    graph_command_parser.add_argument('--type', help="output drawing type, possible = [svg, pdf, png]; "
-                                                     "Default is pdf",
+    graph_command_parser.add_argument('--type', help="Output type of the graph render. Possible types are:\n"
+                                                     "    * pdf (default)\n"
+                                                     "    * svg\n"
+                                                     "    * png",
                                       default='pdf')
-    graph_command_parser.add_argument('--layout', help="Set graphviz ordering layout, one of "
-                                                       "['LR', 'TB', ...]; default: 'TB'",
+    graph_command_parser.add_argument('--layout', help="Set graphviz ordering layout. Possible values are:\n"
+                                                       "    * LR -- from left to right\n"
+                                                       "    * TB -- from top to bottom (default)",
                                       default='TB')
     graph_command_parser.add_argument('--cluster', help="If set, then actions are clustered by executing process",
                                       default=False, action='store_true')
     graph_command_parser.add_argument('--sorted', help="If set, then actual actions list is drawn, as it would "
                                                        "be executed by abstract process-restore machine =)",
                                       default=False, action='store_true')
-    graph_command_parser.add_argument('--skip_vmas', help="Skip all actions with Virtual Memory Area resources",
-                                      default=False, action='store_true')
-    graph_command_parser.add_argument('--skip_regfiles', help="Skip all actions with Regular File resources",
-                                      default=False, action='store_true')
-    graph_command_parser.add_argument('--skip_pipes', help="Skip all actions with Pipes resources",
-                                      default=False, action='store_true')
-    graph_command_parser.add_argument('--skip_groups', help="Skip all actions with Group resources",
-                                      default=False, action='store_true')
-    graph_command_parser.add_argument('--skip_sessions', help="Skip all actions with Session resources",
-                                      default=False, action='store_true')
-    graph_command_parser.add_argument('--skip_private', help="Skip all actions with private resources",
-                                      default=False, action='store_true')
-    graph_command_parser.add_argument('--skip_shmem', help="Skip all actions with Shared Mem resources",
-                                      default=False, action='store_true')
+    graph_command_parser.add_argument('--skip', metavar='TO_SKIP', type=str, nargs='+', default=[],
+                                      help="List of resources name, actions with which should not be rendered\n"
+                                           "to the graph image; that helps sometimes to make graph visualization\n"
+                                           "much more clearer for your particular need to look at some\n"
+                                           "specific resources; Possible values are:\n"
+                                           "    * vmas -- skip actions with Virtual Memory Areas\n"
+                                           "    * regfils -- ... with Regular Files\n"
+                                           "    * pipes -- ... with Pipes\n"
+                                           "    * groups -- ... with Groups\n"
+                                           "    * sessions -- ... with Sessions\n"
+                                           "    * private -- ... with all private (non-shared at all) resources\n"
+                                           "    * shmem -- ... with Shared Memory\n"
+                                      )
 
     return command_parser, {generate_program_command: (gen_program_cmd_parse, generate_final_commands),
                             generate_actions_command: (actions_cmd_parser, generate_intermediate_actions),
@@ -167,21 +175,17 @@ def generate_actions_graph(application, args, parser):
 
     process_tree = build_concept_process_tree(application)
 
-    resource_types_to_skip = []
-    if args.skip_vmas:
-        resource_types_to_skip.append(VMAConcept)
-    if args.skip_regfiles:
-        resource_types_to_skip.append(RegularFileConcept)
-    if args.skip_pipes:
-        resource_types_to_skip.append(PipeConcept)
-    if args.skip_groups:
-        resource_types_to_skip.append(ProcessGroupConcept)
-    if args.skip_sessions:
-        resource_types_to_skip.append(ProcessSessionConcept)
-    if args.skip_private:
-        resource_types_to_skip.append(ProcessInternalsConcept)
-    if args.skip_shmem:
-        resource_types_to_skip.append(SharedMemConcept)
+    skip_dict = {
+        'vmas': VMAConcept,
+        'pipes': PipeConcept,
+        'sessions': ProcessSessionConcept,
+        'groups': ProcessGroupConcept,
+        'regfiles': RegularFileConcept,
+        'shmem': SharedMemConcept,
+        'private': ProcessInternalsConcept
+    }
+
+    resource_types_to_skip = tuple(skip_dict[s] for s in args.skip)
 
     if args.type not in ['svg', 'pdf', 'png']:
         exit_error("unknown output image type: {}".format(args.type), parser)
