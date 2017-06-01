@@ -112,7 +112,7 @@ def topological_sort(graph):
 
     :param graph: graph to sort
     :type graph: DirectedGraph
-    :return: list of vertices sorted topologically or exception is
+    :return: list iterator of vertices sorted topologically or exception is
              raised in case graph is not acyclic
     """
     sorted_actions = []
