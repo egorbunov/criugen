@@ -22,7 +22,7 @@ class ProcessConcept(object):
 
         self._pid = pid
         self._parent_pid = parent_pid
-        self._final_resources = {}  # dict from resource to handle array
+        self._all_resources = {}  # dict from resource to handle array
         self._tmp_resources = {}  # same as _final_resources, but temporary
         self._handle_factories = make_handle_factories_map_for_process()  # type: dict[type, HandleFactory]
         self._resource_listeners = []
@@ -53,13 +53,14 @@ class ProcessConcept(object):
         it is not temporary, so this resource must be in the
         the real process at the end of restoration process
         """
-        self._add_resource_to_dict(self._final_resources, resource, handle)
+        self._add_resource_common(resource, handle)
 
     def add_tmp_resource(self, resource, handle):
         """ Adds resource just like `add_final_resource`, but marks internally
         that this (resource, handle) pair is temporary to the process
         """
-        self._add_resource_to_dict(self._tmp_resources, resource, handle)
+        self._add_resource_common(resource, handle)
+        self._tmp_resources.setdefault(resource, set()).add(handle)
 
     def add_tmp_resource_with_auto_handle(self, resource, handle_type):
         """ Adds temporary resource just as add_tmp_resource does, but
@@ -78,7 +79,7 @@ class ProcessConcept(object):
         """
         :rtype: collections.Iterable[resource_concepts.ResourceConcept]
         """
-        return chain(self._final_resources.iterkeys(), self._tmp_resources.iterkeys())
+        return self._all_resources.iterkeys()
 
     def iter_all_resource_handle_pairs(self):
         """ Iterable over all pairs (resource, handle)
@@ -101,19 +102,12 @@ class ProcessConcept(object):
         """
         return self._tmp_resources.iterkeys()
 
-    def get_final_handles(self, resource):
-        """ Returns list of handles, so each handle `h` from this
-        list: (`h`, resource) must be in the target process state after
-        restoration process
-        """
-        return self._final_resources.get(resource, set())
-
     def get_tmp_handles(self, resource):
         """ Returns list of handles, so each handle `h` from this
         list: (`h`, resource) must NOT be in the target process state after
         restoration process, i.e. (`h`, resource) is temporary pair
         """
-        return self._tmp_resources.get(resource, set())
+        return self._tmp_resources.get(resource)
 
     def get_all_handles_of_type(self, resource, handle_type):
         """ Returns all handles of particular type pointing to the resource
@@ -124,29 +118,23 @@ class ProcessConcept(object):
     def iter_all_handles(self, resource):
         """ Returns iterator through all handles, which point to the resource
         """
-        return chain(self.get_final_handles(resource), self.get_tmp_handles(resource))
+        return iter(self._all_resources.get(resource, []))
 
     def has_resource(self, resource):
         """ Returns true in case given resource is handled by this process (at any handle)
         """
-        return resource in self._final_resources or resource in self._tmp_resources
+        return resource in self._all_resources
 
     def has_resource_at_handle_type(self, resource, handle_type):
         """ Returns true if (resource, handle) pair is in this process and
         type(handle) == handle_type
         """
-        for h in self.iter_all_handles(resource):
-            if type(h) == handle_type:
-                return True
-        return False
+        return any(self.get_all_handles_of_type(resource, handle_type))
 
     def has_resource_at_handle(self, resource, handle):
         """ Returns True in case (resource, handle) is in that process
         """
-        for h in self.iter_all_handles(resource):
-            if h == handle:
-                return True
-        return False
+        return resource in self._all_resources and handle in self._all_resources[resource]
 
     def is_tmp_resource(self, resource, handle):
         """ Returns True is (resource, handle) is in the process and this pair is temporary
@@ -173,14 +161,12 @@ class ProcessConcept(object):
         handle_factory = self._handle_factories[handle_type]
         return handle_factory.get_free_handle()
 
-    def _add_resource_to_dict(self, dct, resource, handle):
+    def _add_resource_common(self, resource, handle):
         """ Use this every time you need to add a resource to the process
         instance
         """
-        dct.setdefault(resource, set()).add(handle)
-        # mark handle as used within process
-        self._set_handle_is_used(handle)
-
+        self._all_resources.setdefault(resource, set()).add(handle)
         # call resource add listener
         for rl in self._resource_listeners:
             rl.on_proc_add_resource(self, resource, handle)
+
