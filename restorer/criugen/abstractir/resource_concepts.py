@@ -141,7 +141,7 @@ class RegularFileConcept(ResourceConcept):
         return processes
 
     def __repr__(self):
-        return self.payload.__repr__
+        return self.payload.__repr__()
 
 
 class SharedMemConcept(ResourceConcept):
