@@ -52,7 +52,7 @@ FileDescriptor = int
 ANY_FILE_DESCRIPTOR = FileDescriptor(-1)
 
 # For resources, which don't need handle
-NO_HANDLE = None
+NO_HANDLE = "NOHANDLE"
 
 
 class __ImpossibleHandle(object):
