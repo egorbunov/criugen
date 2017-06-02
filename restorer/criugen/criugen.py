@@ -41,6 +41,7 @@ def build_parsers():
     generate_program_command = "program"
     generate_actions_command = "actions-ir"
     generate_graph_command = "actions-graph"
+    pstree_graph_command = "pstree"
 
     command_parser = argparse.ArgumentParser(description='', formatter_class=argparse.RawTextHelpFormatter)
     command_parser.add_argument('command', default=generate_program_command,
@@ -48,6 +49,7 @@ def build_parsers():
                                      "    * program (default) -- generate final restorer program\n"
                                      "    * actions-ir -- generate list of abstract intermediate actions\n"
                                      "    * actions-graph -- render IR actions graph\n"
+                                     "    * pstree -- render process tree graph\n"
                                      "\n"
                                      "You can see help for each of any command:\n"
                                      "    ./criugen.py <command> -h")
@@ -76,49 +78,77 @@ def build_parsers():
     actions_cmd_parser.add_argument('-o', '--output_file', help="Output json file with actions, "
                                                                 "if not specified actions are printed to stdout")
 
+    # common visualization parser
+    common_vis_parser = argparse.ArgumentParser(add_help=False)
+    common_vis_parser.add_argument('-o', '--output_file', help="Output graph drawing file path; if not specified,\n"
+                                                               "graph will be saved in the current dir and showed\n"
+                                                               "immediately (like when --show option is specified)"
+                                   ,
+                                   default=None)
+    common_vis_parser.add_argument('--show', help="Show graph immediately",
+                                   default=False, action='store_true')
+    common_vis_parser.add_argument('--type', help="Output type of the graph render. Possible types are:\n"
+                                                  "    * pdf (default)\n"
+                                                  "    * svg\n"
+                                                  "    * png\n"
+                                                  "    * gv",
+                                   default='pdf')
+    common_vis_parser.add_argument('--layout', help="Set graphviz ordering layout. Possible values are:\n"
+                                                    "    * LR -- from left to right\n"
+                                                    "    * TB -- from top to bottom (default)",
+                                   default='TB')
+    common_vis_parser.add_argument('--skip', metavar='TO_SKIP', type=str, nargs='+', default=(),
+                                   help="List of resources name, which should not be rendered\n"
+                                        "to the graph image; that helps sometimes to make graph visualization\n"
+                                        "much more clearer for your particular need to look at some\n"
+                                        "specific resources; Possible values are:\n"
+                                        "    * vmas -- skip actions with Virtual Memory Areas\n"
+                                        "    * regfiles -- ... with Regular Files\n"
+                                        "    * pipes -- ... with Pipes\n"
+                                        "    * groups -- ... with Groups\n"
+                                        "    * sessions -- ... with Sessions\n"
+                                        "    * private -- ... with all private (non-shared at all) resources\n"
+                                        "    * shmem -- ... with Shared Memory\n"
+                                   )
+
     # visualization command parser
     graph_command_parser = argparse.ArgumentParser(prog="{} {}".format(PROGRAM_NAME, generate_graph_command),
                                                    description='Actions graph visualization command',
-                                                   parents=[root_parser],
+                                                   parents=[root_parser, common_vis_parser],
                                                    formatter_class=argparse.RawTextHelpFormatter)
-    graph_command_parser.add_argument('-o', '--output_file', help="Output graph drawing file path; if not specified,\n"
-                                                                  "graph will be saved in the current dir and showed\n"
-                                                                  "immediately (like when --show option is specified)"
-                                      ,
-                                      default=None)
-    graph_command_parser.add_argument('--show', help="Show graph immediately",
-                                      default=False, action='store_true')
-    graph_command_parser.add_argument('--type', help="Output type of the graph render. Possible types are:\n"
-                                                     "    * pdf (default)\n"
-                                                     "    * svg\n"
-                                                     "    * png",
-                                      default='pdf')
-    graph_command_parser.add_argument('--layout', help="Set graphviz ordering layout. Possible values are:\n"
-                                                       "    * LR -- from left to right\n"
-                                                       "    * TB -- from top to bottom (default)",
-                                      default='TB')
     graph_command_parser.add_argument('--cluster', help="If set, then actions are clustered by executing process",
                                       default=False, action='store_true')
-    graph_command_parser.add_argument('--sorted', help="If set, then actual actions list is drawn, as it would "
+    graph_command_parser.add_argument('--sorted', help="If set, then actual actions list is drawn, as it would\n"
                                                        "be executed by abstract process-restore machine =)",
                                       default=False, action='store_true')
-    graph_command_parser.add_argument('--skip', metavar='TO_SKIP', type=str, nargs='+', default=[],
-                                      help="List of resources name, actions with which should not be rendered\n"
-                                           "to the graph image; that helps sometimes to make graph visualization\n"
-                                           "much more clearer for your particular need to look at some\n"
-                                           "specific resources; Possible values are:\n"
-                                           "    * vmas -- skip actions with Virtual Memory Areas\n"
-                                           "    * regfils -- ... with Regular Files\n"
-                                           "    * pipes -- ... with Pipes\n"
-                                           "    * groups -- ... with Groups\n"
-                                           "    * sessions -- ... with Sessions\n"
-                                           "    * private -- ... with all private (non-shared at all) resources\n"
-                                           "    * shmem -- ... with Shared Memory\n"
-                                      )
+
+    # process tree visualization parser
+    pstreevis_command_parser = argparse.ArgumentParser(prog="{} {}".format(PROGRAM_NAME, pstree_graph_command),
+                                                       description='Process tree visualization command',
+                                                       parents=[root_parser, common_vis_parser],
+                                                       formatter_class=argparse.RawTextHelpFormatter)
+    pstreevis_command_parser.add_argument('--notmp', help="If set, then no temporary resource will be shown\n"
+                                                          "on the process tree graph",
+                                          default=False, action='store_true')
 
     return command_parser, {generate_program_command: (gen_program_cmd_parse, generate_final_commands),
                             generate_actions_command: (actions_cmd_parser, generate_intermediate_actions),
-                            generate_graph_command: (graph_command_parser, generate_actions_graph)}
+                            generate_graph_command: (graph_command_parser, generate_actions_graph),
+                            pstree_graph_command: (pstreevis_command_parser, generate_pstree_graph)}
+
+
+def filter_skipped_types(skipped_type_names):
+    skip_dict = {
+        'vmas': VMAConcept,
+        'pipes': PipeConcept,
+        'sessions': ProcessSessionConcept,
+        'groups': ProcessGroupConcept,
+        'regfiles': RegularFileConcept,
+        'shmem': SharedMemConcept,
+        'private': ProcessInternalsConcept
+    }
+
+    return tuple(skip_dict[s] for s in skipped_type_names)
 
 
 def exit_error(message, print_help_parser=None):
@@ -175,19 +205,9 @@ def generate_actions_graph(application, args, parser):
 
     process_tree = build_concept_process_tree(application)
 
-    skip_dict = {
-        'vmas': VMAConcept,
-        'pipes': PipeConcept,
-        'sessions': ProcessSessionConcept,
-        'groups': ProcessGroupConcept,
-        'regfiles': RegularFileConcept,
-        'shmem': SharedMemConcept,
-        'private': ProcessInternalsConcept
-    }
+    resource_types_to_skip = filter_skipped_types(args.skip)
 
-    resource_types_to_skip = tuple(skip_dict[s] for s in args.skip)
-
-    if args.type not in ['svg', 'pdf', 'png']:
+    if args.type not in ['svg', 'pdf', 'png', 'gv']:
         exit_error("unknown output image type: {}".format(args.type), parser)
 
     graph = build_actions_graph(process_tree, tuple(resource_types_to_skip))
@@ -199,6 +219,17 @@ def generate_actions_graph(application, args, parser):
         sorted_actions = sort_actions_graph(graph)
         viz.render_actions_list(sorted_actions, args.output_file, type=args.type, view=args.show,
                                 layout=args.layout)
+
+
+def generate_pstree_graph(application, args, parser):
+    from abstractir.concept import build_concept_process_tree
+    import visualize.core as viz
+
+    resource_types_to_skip = filter_skipped_types(args.skip)
+
+    process_tree = build_concept_process_tree(application)
+    viz.render_pstree(process_tree, args.output_file, output_type=args.type, view=args.show,
+                      layout=args.layout, to_skip_resource_types=resource_types_to_skip, no_tmp=args.notmp)
 
 
 if __name__ == "__main__":

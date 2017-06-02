@@ -74,7 +74,7 @@ class ProcessTreeConcept(object):
         :return: list of children processes for given process
         :rtype: list[ProcessConcept]
         """
-        return self._proc_children[proc.pid]
+        return self._proc_graph.vertex_neighbours(proc)
 
     def proc_parent(self, proc):
         """

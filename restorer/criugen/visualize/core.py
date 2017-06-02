@@ -1,10 +1,11 @@
 import graphviz as gv
 
-from pyutils.graph import DirectedGraph
-from abstractir.actions import *
-import abstractir.actions_labels as labels
 import gvboost
+import visualize.actions_labels as labels
+from abstractir.actions import *
+from abstractir.pstree import ProcessTreeConcept
 from pyutils.func import update_dict
+from pyutils.graph import DirectedGraph
 
 
 def render_actions_graph(actions_graph,
@@ -20,10 +21,40 @@ def render_actions_graph(actions_graph,
     :type actions_graph: DirectedGraph
     """
 
-    gv_graph = _init_graphviz_graph(g_format=output_type, rankdir_layout=layout)
-    _fill_graphviz_graph(actions_graph,
-                         gv_graph,
-                         do_cluster=do_cluster)
+    gv_graph = _init_common_graphviz_graph(g_format=output_type, rankdir_layout=layout)
+    _fill_graphviz_graph_actions(actions_graph,
+                                 gv_graph,
+                                 do_cluster=do_cluster)
+    if output_file:
+        gv_graph.render(filename=output_file)
+    if not output_file or view:
+        gv_graph.view()
+
+
+def render_pstree(process_tree,
+                  output_file=None, output_type='svg', view=False, layout='LR',
+                  to_skip_resource_types=(), no_tmp=False):
+    """ Renders process tree
+
+    :param process_tree: process tree (ProcessTreeConcept)
+    :type process_tree: ProcessTreeConcept
+    :param output_file: file to write drawing
+    :param output_type: type of output rendered image
+    :param view: is set, then drawing is shown immediately after graph generation
+    :param layout: graphviz graph layout: ['LR', 'TB' ,...]
+    :param to_skip_resource_types: list of resource types to skip in render
+    """
+    import process_label as pl
+
+    gv_graph = _init_common_graphviz_graph(g_format=output_type, rankdir_layout=layout)
+    gvboost.set_styles(gv_graph, _get_process_node_style())
+
+    for p in process_tree.processes:
+        gv_graph.node(str(p.pid), pl.get_proc_label(p, to_skip_resource_types, no_tmp))
+
+    gv_graph.edges((str(p.pid), str(c.pid)) for p in process_tree.processes
+                   for c in process_tree.proc_children(p))
+
     if output_file:
         gv_graph.render(filename=output_file)
     if not output_file or view:
@@ -39,22 +70,28 @@ def render_actions_list(actions_list, output_file, type='svg', view=False, layou
     :param view: flag, if set to True, then graph will be shown immediately
     :param layout: graphviz graph layout: ['LR', 'TB' ,...]
     """
-    gv_graph = _init_graphviz_graph(g_format=type, rankdir_layout=layout)
-    _add_actions_vertices_to_graph(gv_graph, actions_list, do_cluster=False)
+    gv_graph = _init_common_graphviz_graph(g_format=type, rankdir_layout=layout)
+    node_ids = _add_actions_vertices_to_graph(gv_graph, actions_list, do_cluster=False)
 
-    gv_graph.render(filename=output_file)
-    if view:
+    for i in range(len(actions_list)):
+        if i == len(actions_list) - 1:
+            continue
+        gv_graph.edge(node_ids[actions_list[i]], node_ids[actions_list[i + 1]])
+
+    if output_file:
+        gv_graph.render(filename=output_file)
+    if not output_file or view:
         gv_graph.view()
 
 
-def _init_graphviz_graph(g_format='svg', rankdir_layout='LR'):
+def _init_common_graphviz_graph(g_format='svg', rankdir_layout='LR'):
     graph = gv.Digraph(format=g_format)
     graph.attr(rankdir=rankdir_layout)
     gvboost.apply_styles(graph, _get_common_styles())
     return graph
 
 
-def _fill_graphviz_graph(actions_graph, gv_graph, do_cluster=False):
+def _fill_graphviz_graph_actions(actions_graph, gv_graph, do_cluster=False):
     node_ids = _add_actions_vertices_to_graph(gv_graph, actions_graph.vertices_iter, do_cluster)
 
     for u, v in actions_graph.edges_iter:
@@ -145,3 +182,19 @@ def _get_action_node_style(action):
                 'fillcolor': '#e5f9c5'
             }, common_node_style)
         }
+
+
+def _get_process_node_style():
+    common_node_style = {
+        'shape': 'rectangle',
+        'fontcolor': 'black',
+        'color': 'black',
+        'style': 'invisible',
+        'fontname': 'Verdana'
+    }
+
+    return {
+        'node': update_dict({
+            'fillcolor': '#f9e47f'
+        }, common_node_style)
+    }
