@@ -1,0 +1,37 @@
+27436
+[pid = 27436 | tid = 27436] INFO: Initializing process control
+[pid = 27436 | tid = 27437] INFO: [master] Accepting new connection...
+[pid = 27436 | tid = 27437] INFO: [master] Accepting new connection...
+[pid = 27436 | tid = 27436] INFO: Finish initialization of process control
+[pid = 27436 | tid = 27438] INFO: [slave] Got fork request
+[pid = 27436 | tid = 27438] INFO: [slave] Waiting for new child to connect to master...
+[pid = 27436 | tid = 27437] INFO: [master] Accepting new connection...
+[pid = 27439 | tid = 27439] INFO: [slave] Got fork request
+[pid = 27439 | tid = 27439] INFO: [slave] Waiting for new child to connect to master...
+[pid = 27436 | tid = 27437] INFO: [master] Accepting new connection...
+[pid = 27439 | tid = 27439] INFO: [slave] Got fork request
+[pid = 27439 | tid = 27439] INFO: [slave] Waiting for new child to connect to master...
+[pid = 27436 | tid = 27437] INFO: [master] Accepting new connection...
+[pid = 27441 | tid = 27441] INFO: [slave] Got fork request
+[pid = 27441 | tid = 27441] INFO: [slave] Waiting for new child to connect to master...
+[pid = 27436 | tid = 27437] INFO: [master] Accepting new connection...
+[pid = [pid = 27335 | tid = 27335] INFO: Destroying process control
+[pid = 27335 | tid = 27337] INFO: [slave] Got finish request
+[pid = 27335 | tid = 27337] INFO: [slave] Finishing
+[pid = 27335 | tid = 27337] INFO: [slave] Goodbye, master!
+[pid = 27338 | tid = 27338] INFO: [slave] Got finish request
+[pid = 27338 | tid = 27338] INFO: [slave] Finishing
+[pid = 27338 | tid = 27338] INFO: [slave] Goodbye, master!
+[pid = 27339 | tid = 27339] INFO: [slave] Got finish request
+[pid = 27339 | tid = 27339] INFO: [slave] Finishing
+[pid = 27339 | tid = 27339] INFO: [slave] Goodbye, master!
+[pid = 27340 | tid = 27340] INFO: [slave] Got finish request
+[pid = 27340 | tid = 27340] INFO: [slave] Finishing
+[pid = 27340 | tid = 27340] INFO: [slave] Goodbye, master!
+[pid = 27341 | tid = 27341] INFO: [slave] Got finish request
+[pid = 27341 | tid = 27341] INFO: [slave] Finishing
+[pid = 27341 | tid = 27341] INFO: [slave] Goodbye, master!
+[pid = 27335 | tid = 27335] INFO: Waiting for listener thread
+[pid = 27335 | tid = 27336] ERROR: [master] Accept failed [Invalid argument]
+[pid = 27335 | tid = 27335] INFO: Waiting for slave master
+[pid = 27335 | tid = 27335] INFO: Destroying rwlock
