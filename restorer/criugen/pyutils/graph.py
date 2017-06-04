@@ -107,6 +107,12 @@ class DirectedGraph(object):
         post_visit(cur_v)
 
 
+class GraphIsNotAcyclic(Exception):
+    def __init__(self, cycle):
+        super(GraphIsNotAcyclic, self).__init__(cycle)
+        self.cycle = cycle
+
+
 def topological_sort(graph):
     """ Sorts graph topologically
 
@@ -121,21 +127,27 @@ def topological_sort(graph):
     entered_color = 1
     exited_color = 2
     vertex_color = {}
+    vertex_stack = []
 
     def pre_visit(vertex):
         cur_color = vertex_color.setdefault(vertex, no_color)
 
         if cur_color == entered_color:
             # already entered there!
-            raise RuntimeError("Graph is not acyclic; Can't sort.")
+            idx = vertex_stack.index(vertex)
+            raise GraphIsNotAcyclic(vertex_stack[idx:])
 
         if cur_color == exited_color:
             # we are already traversed from this vertex, so we not entering it again
             return
 
+        vertex_stack.append(vertex)
+
         vertex_color[vertex] = entered_color
 
     def post_visit(vertex):
+        vertex_stack.pop()
+
         sorted_actions.append(vertex)
         vertex_color[vertex] = exited_color
 

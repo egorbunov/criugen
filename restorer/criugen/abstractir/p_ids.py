@@ -46,6 +46,14 @@ def init_groups_resource(process_tree, app, sessions_map):
     raw_processes = app.processes
     groups = {}  # type: dict[GroupId, ProcessGroupConcept]
 
+    for p in raw_processes:
+        process_concept = process_tree.proc_by_pid(p.pid)
+        group_concept = groups.setdefault(p.pgid, ProcessGroupConcept(p.pgid))
+
+        process_concept.add_final_resource(group_concept, handle=NO_HANDLE)
+
+    # groups are initialized now
+
     # tricky moment: in linux, then session is created the group is created too
     # so to support such behaviour we just arrange such resource creation making
     # group resource to depend on session resource:
@@ -55,11 +63,5 @@ def init_groups_resource(process_tree, app, sessions_map):
 
         # session always leads to group creation
         g.add_dependency(sessions_map[g_id], handle_type=type(NO_HANDLE))
-
-    for p in raw_processes:
-        process_concept = process_tree.proc_by_pid(p.pid)
-        group_concept = groups.setdefault(p.pgid, ProcessGroupConcept(p.pgid))
-
-        process_concept.add_final_resource(group_concept, handle=NO_HANDLE)
 
     return groups

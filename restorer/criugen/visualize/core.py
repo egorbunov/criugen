@@ -88,8 +88,21 @@ def render_actions_list(actions_list, output_file, type='svg', view=False, layou
         gv_graph.view()
 
 
-def _init_common_graphviz_graph(g_format='svg', rankdir_layout='LR'):
-    graph = gv.Digraph(format=g_format)
+def render_actions_cycle(cycle, output_file, type, view):
+    gv_graph = _init_common_graphviz_graph(g_format=type, engine='circo')
+    node_ids = _add_actions_vertices_to_graph(gv_graph, cycle, do_cluster=False)
+
+    for i in range(len(cycle)):
+        gv_graph.edge(node_ids[cycle[i]], node_ids[cycle[(i + 1) % len(cycle)]])
+
+    if output_file:
+        gv_graph.render(filename=output_file)
+    if not output_file or view:
+        gv_graph.view()
+
+
+def _init_common_graphviz_graph(g_format='svg', rankdir_layout='LR', engine='dot'):
+    graph = gv.Digraph(format=g_format, engine=engine)
     graph.attr(rankdir=rankdir_layout)
     gvboost.apply_styles(graph, _get_common_styles())
     return graph

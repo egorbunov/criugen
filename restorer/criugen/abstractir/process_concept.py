@@ -151,6 +151,7 @@ class ProcessConcept(object):
     def _set_handle_is_used(self, handle):
         handle_factory = self._handle_factories[type(handle)]
         if handle_factory.is_handle_used(handle):
+            print("Warning [but don't worry for now]: handle is already used handle: [{}]".format(handle))
             # we ignore the fact of repeated handle here; that is because
             # it can happen for tmp added resources and our algorithm can
             # deal with it
@@ -166,6 +167,7 @@ class ProcessConcept(object):
         instance
         """
         self._all_resources.setdefault(resource, set()).add(handle)
+        self._set_handle_is_used(handle)
         # call resource add listener
         for rl in self._resource_listeners:
             rl.on_proc_add_resource(self, resource, handle)
