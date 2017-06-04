@@ -30,6 +30,11 @@ int pc_fork(int executor_pid);
 int pc_setpgid(int executor_pid, uint32_t pid, uint32_t pgid);
 
 /**
+ * makes exeuteors_pid process to execute setsid()
+**/
+int pc_setsid(int executor_pid);
+
+/**
  * Send finish message to process with executor_pid
  */
 int pc_finish(int executor_pid);

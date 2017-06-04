@@ -27,12 +27,17 @@ static int send_msg_of_type(int socket_fd, message_type type, char* msg, size_t 
 
 
 // no serialization beacuse we want to use it on the same machine	
+
 int send_setpgid_msg(int socket_fd, setpgid_msg msg) {
 	return send_msg_of_type(socket_fd, MSG_SETPGID, (char*) &msg, sizeof(msg));
 }
 
 int send_fork_msg(int socket_fd) {
 	return send_msg_of_type(socket_fd, MSG_FORK, NULL, 0);
+}
+
+int send_setsid_msg(int socket_fd) {
+	return send_msg_of_type(socket_fd, MSG_SETSID, NULL, 0);
 }
 
 int send_finsih_msg(int socket_fd) {

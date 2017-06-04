@@ -25,7 +25,7 @@ void run(void) {
 	pc_setpgid(p_3, 0, 0);
 	pc_setpgid(p_4, 0, 0);
 
-	// stting up final groups
+	// seting up final groups
 	pc_setpgid(p_4, 0, p_1);
 	pc_setpgid(p_1, 0, p_3);
 	pc_setpgid(p_3, 0, p_2);

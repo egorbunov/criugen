@@ -181,6 +181,31 @@ int pc_setpgid(int executor_pid, uint32_t pid, uint32_t pgid) {
 	return response;
 }
 
+int pc_setsid(int executor_pid) {
+	connection conn;
+	int sock = 0;
+	int32_t response = 0;
+
+	find_connection(executor_pid, &conn);
+	if (conn.connected_pid < 0) {
+		log_error("No such executor!");
+		return -42;
+	}
+	sock = conn.sock_fd;
+
+	if (send_setsid_msg(sock) < 0) {
+		log_sys_error("Can't send setsid msg");
+		return -1;
+	}
+
+	if (recv_response(sock, &response) < 0) {
+		log_sys_error("Can't recv response");
+		return -1;
+	}
+
+	return response;
+}
+
 /**
  * Send finish message to process with executor_pid
  */
@@ -214,6 +239,7 @@ int pc_finish(int executor_pid) {
 
 static int process_setpgid(int sock);
 static int process_fork(int sock);
+static int process_setsid(int sock);
 
 // process slave function
 static void run_process_node(int master_conn_sock) {
@@ -233,6 +259,11 @@ static void run_process_node(int master_conn_sock) {
 			case MSG_SETPGID: {
 				log_info("[slave] Got setpgid request");
 				res = process_setpgid(master_conn_sock);
+				break;
+			}
+			case MSG_SETSID: {
+				log_info("[slave] Got setsid request");
+				res = process_setsid(master_conn_sock);
 				break;
 			}
 			case MSG_FORK: {
@@ -299,6 +330,17 @@ static int process_setpgid(int sock) {
 	if (setpgid(m.pid, m.pgid) < 0) {
 		log_sys_error("[slave] Can't run command setpgid(%d, %d)", m.pid, m.pgid);
 		res = -1;
+	}
+
+	return res;
+}
+
+static int process_setsid(int sock) {
+	int32_t res = 0;
+
+	if (setsid() < 0) {
+		log_sys_error("[slave] Can't execute setsid() command");
+		res = 1;
 	}
 
 	return res;
