@@ -170,7 +170,7 @@ def get_resources_types_to_skip(skipped_type_names, keep_type_names):
     from itertools import chain
 
     all_type_names = set(get_all_resources_type_names())
-
+    
     for t in chain(skipped_type_names, keep_type_names):
         if t not in all_type_names:
             raise RuntimeError("Unknown resource type: {}".format(t))
