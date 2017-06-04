@@ -33,7 +33,7 @@ def render_actions_graph(actions_graph,
 
 def render_pstree(process_tree,
                   output_file=None, output_type='svg', view=False, layout='LR',
-                  to_skip_resource_types=(), no_tmp=False):
+                  to_skip_resource_types=(), no_tmp=False, draw_fake_root=False):
     """ Renders process tree
 
     :param process_tree: process tree (ProcessTreeConcept)
@@ -43,6 +43,7 @@ def render_pstree(process_tree,
     :param view: is set, then drawing is shown immediately after graph generation
     :param layout: graphviz graph layout: ['LR', 'TB' ,...]
     :param to_skip_resource_types: list of resource types to skip in render
+    :param no_tmp: if set, no temporary resources rendered
     """
     import process_label as pl
 
@@ -50,10 +51,13 @@ def render_pstree(process_tree,
     gvboost.set_styles(gv_graph, _get_process_node_style())
 
     for p in process_tree.processes:
+        if p == process_tree.root_process or draw_fake_root:
+            continue
         gv_graph.node(str(p.pid), pl.get_proc_label(p, to_skip_resource_types, no_tmp))
 
     gv_graph.edges((str(p.pid), str(c.pid)) for p in process_tree.processes
-                   for c in process_tree.proc_children(p))
+                   for c in process_tree.proc_children(p)
+                   if p != process_tree.root_process or draw_fake_root)
 
     if output_file:
         gv_graph.render(filename=output_file)

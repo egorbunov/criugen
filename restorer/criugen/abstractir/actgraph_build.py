@@ -100,6 +100,7 @@ def _build_all_precedence_edges(process_tree, actions_index, actions_graph):
     _ensure_resource_created_before_used(actions_index, actions_graph)
     _ensure_resource_removed_after_used(actions_index, actions_graph)
     _ensure_inherited_resource_created_before_fork(actions_index, actions_graph)
+    _ensure_inherited_resource_removed_after_fork(actions_index, actions_graph)
     _ensure_dependencies_created_before_used(actions_index, actions_graph)
     _ensure_consistency(process_tree, actions_index, actions_graph)
 
@@ -177,9 +178,6 @@ def _ensure_inherited_resource_created_before_fork(actions_index, actions_graph)
     (here our inheritance closure works for us so we can check only children,
     but not the whole subtree)
 
-    Important: if inherited resource is temporary, then the REMOVE action for this resource
-    must be performed AFTER fork of children, which share that resource
-
     Complexity: (Create-acts-cnt) * (Process-cnt)
 
     :type actions_graph: DirectedGraph
@@ -204,14 +202,44 @@ def _ensure_inherited_resource_created_before_fork(actions_index, actions_graph)
         )
         _add_precedence_edges_from_to([cr_act], fork_acts_which_share, actions_graph)
 
-        if not creator.is_tmp_resource(resource, handle):
+
+def _ensure_inherited_resource_removed_after_fork(actions_index, actions_graph):
+    """ Some resources, which are spread across the process tree with help of inheritance
+    may become temporary somewhere in the middle of the tree, because there are "holes" in
+    the target tree: processes, which close the inheritable resource after forking a child.
+
+    Because this tmp resource must be removed, then we should ensure, that they are removed
+    only after forking children, which inherit them!
+
+    Complexity: (Remove-acts-cnt) * (Process-cnt)
+
+
+    :type actions_graph: DirectedGraph
+    :type actions_index: ActionsIndex
+    """
+
+    # TODO: This step is very similar to step, where we add precedence relation between
+    # TODO: actions, which do something with resource and remove action for that resource.
+    # TODO: but in case of inheritance that is done implicitly! Maybe we can somehow
+    # TODO: precompute such actions which use the resource implicitly or explicitly to
+    # TODO: avoid this
+
+    # there are remove act for each temporary resource!
+    for rm_act in actions_index.remove_actions:  # type: RemoveResourceAction
+        resource = rm_act.resource  # type: ResourceConcept
+
+        if resource.is_sharable or not resource.is_inherited:
+            # not interested in sharable or private resources
             continue
 
-        # resource is temporary, there must be reomve action
-        remove_act = actions_index.resource_remove_action(creator, resource, handle)
-        # temporary resource must be deleted only after forking children, which share that resource
-        # via inheritance =)
-        _add_precedence_edges_from_to(fork_acts_which_share, [remove_act], actions_graph)
+        # only those fork actions, which fork children, who really share the inheritable
+        # resource
+        fork_acts_which_share = (
+            fa for fa in actions_index.fork_actions
+            if fa.parent == rm_act.process and fa.child.has_resource_at_handle(resource, rm_act.handle)
+        )
+
+        _add_precedence_edges_from_to(fork_acts_which_share, [rm_act], actions_graph)
 
 
 def _ensure_dependencies_created_before_used(actions_index, actions_graph):
