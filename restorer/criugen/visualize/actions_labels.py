@@ -31,7 +31,7 @@ def _get_create_act_label(act):
     :type act: actions.CreateResourceAction
     """
     if act.handles and act.handles[0] is not NO_HANDLE:
-        return "<{}<BR/>Creates<BR/>{}<BR/>at<BR/>{}>".format(
+        return "<{}<BR/><B>Creates</B><BR/>{}<BR/><B>at</B><BR/>{}>".format(
             act.process.minimalistic_repr,
             act.resource.minimalistic_repr,
             act.handles)

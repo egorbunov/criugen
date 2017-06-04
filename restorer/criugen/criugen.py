@@ -1,4 +1,5 @@
 #! /usr/bin/env python2
+from __future__ import print_function
 
 import argparse
 import json
@@ -129,6 +130,10 @@ def build_parsers():
     graph_command_parser.add_argument('--sorted', help="If set, then actual actions list is drawn, as it would\n"
                                                        "be executed by abstract process-restore machine =)",
                                       default=False, action='store_true')
+    graph_command_parser.add_argument('--show_cycle',
+                                      help="If set, then in case --sorted option specified and graph is not\n"
+                                           "acyclic, cycle is shown as drawing\n",
+                                      default=False, action='store_true')
 
     # process tree visualization parser
     pstreevis_command_parser = argparse.ArgumentParser(prog="{} {}".format(PROGRAM_NAME, pstree_graph_command),
@@ -161,9 +166,20 @@ def get_all_resources_type_names():
     return tuple(get_all_resources_type_dict().keys())
 
 
-def get_resources_to_skip(skipped_type_names, keep_type_names):
-    type_dict = get_all_resources_type_dict()
-    return tuple(type_dict[s] for s in skipped_type_names if s not in keep_type_names)
+def get_resources_types_to_skip(skipped_type_names, keep_type_names):
+    from itertools import chain
+
+    all_type_names = set(get_all_resources_type_names())
+    
+    for t in chain(skipped_type_names, keep_type_names):
+        if t not in all_type_names:
+            raise RuntimeError("Unknown resource type: {}".format(t))
+
+    name_to_type = get_all_resources_type_dict()
+    skip = set(skipped_type_names)
+    keep = set(keep_type_names)
+
+    return tuple(name_to_type[n] for n in (all_type_names - (keep - skip)))
 
 
 def exit_error(message, print_help_parser=None):
@@ -216,11 +232,12 @@ def generate_actions_graph(application, args, parser):
     from abstractir.concept import build_concept_process_tree
     from abstractir.actgraph_build import build_actions_graph
     from abstractir.actgraph_sort import sort_actions_graph
+    from pyutils.graph import GraphIsNotAcyclic
     import visualize.core as viz
 
     process_tree = build_concept_process_tree(application)
 
-    resource_types_to_skip = get_resources_to_skip(args.skip, args.keep)
+    resource_types_to_skip = get_resources_types_to_skip(args.skip, args.keep)
 
     if args.type not in ['svg', 'pdf', 'png', 'gv']:
         exit_error("unknown output image type: {}".format(args.type), parser)
@@ -228,19 +245,33 @@ def generate_actions_graph(application, args, parser):
     graph = build_actions_graph(process_tree, tuple(resource_types_to_skip))
 
     if not args.sorted:
+        # just drawing graph
         viz.render_actions_graph(graph, args.output_file, output_type=args.type, view=args.show,
                                  layout=args.layout, do_cluster=args.cluster)
     else:
-        sorted_actions = sort_actions_graph(graph)
-        viz.render_actions_list(sorted_actions, args.output_file, type=args.type, view=args.show,
-                                layout=args.layout)
+        # trying to sort the graph and draw list of actions
+        try:
+            sorted_actions = sort_actions_graph(graph)
+            viz.render_actions_list(sorted_actions, args.output_file,
+                                    type=args.type, view=args.show,
+                                    layout=args.layout)
+
+        except GraphIsNotAcyclic as e:
+            print("ERROR: actions graph is not acyclic: {}".format(e.cycle), file=sys.stderr)
+
+            if not args.show_cycle:
+                pass
+
+            # drawing cycle, if we got one =)
+            viz.render_actions_cycle(e.cycle, args.output_file,
+                                     type=args.type, view=args.show)
 
 
 def generate_pstree_graph(application, args, parser):
     from abstractir.concept import build_concept_process_tree
     import visualize.core as viz
 
-    resource_types_to_skip = get_resources_to_skip(args.skip, args.keep)
+    resource_types_to_skip = get_resources_types_to_skip(args.skip, args.keep)
 
     process_tree = build_concept_process_tree(application)
     viz.render_pstree(process_tree, args.output_file, output_type=args.type, view=args.show,
