@@ -98,7 +98,7 @@ def build_parsers():
                                                     "    * TB -- from top to bottom (default)",
                                    default='TB')
     common_vis_parser.add_argument('--skip', metavar='TO_SKIP', type=str, nargs='+', default=(),
-                                   help="List of resources name, which should not be rendered\n"
+                                   help="List of resources name, which should NOT BE rendered\n"
                                         "to the graph image; that helps sometimes to make graph visualization\n"
                                         "much more clearer for your particular need to look at some\n"
                                         "specific resources; Possible values are:\n"
@@ -109,6 +109,14 @@ def build_parsers():
                                         "    * sessions -- ... with Sessions\n"
                                         "    * private -- ... with all private (non-shared at all) resources\n"
                                         "    * shmem -- ... with Shared Memory\n"
+                                   )
+    common_vis_parser.add_argument('--keep', metavar='TO_KEEP_RESOURCE', type=str, nargs='+',
+                                   default=get_all_resources_type_names(),
+                                   help="List of resource names, which should BE rendered\n"
+                                        "to the graph image; see '--skip' option for the list of\n"
+                                        "possible resources to skip/keep. This list is intersected\n"
+                                        "with '--skip' list to form the final resource list to be shown.\n"
+                                        "If not specified all resources are kept."
                                    )
 
     # visualization command parser
@@ -137,8 +145,8 @@ def build_parsers():
                             pstree_graph_command: (pstreevis_command_parser, generate_pstree_graph)}
 
 
-def filter_skipped_types(skipped_type_names):
-    skip_dict = {
+def get_all_resources_type_dict():
+    return {
         'vmas': VMAConcept,
         'pipes': PipeConcept,
         'sessions': ProcessSessionConcept,
@@ -148,7 +156,14 @@ def filter_skipped_types(skipped_type_names):
         'private': ProcessInternalsConcept
     }
 
-    return tuple(skip_dict[s] for s in skipped_type_names)
+
+def get_all_resources_type_names():
+    return tuple(get_all_resources_type_dict().keys())
+
+
+def get_resources_to_skip(skipped_type_names, keep_type_names):
+    type_dict = get_all_resources_type_dict()
+    return tuple(type_dict[s] for s in skipped_type_names if s not in keep_type_names)
 
 
 def exit_error(message, print_help_parser=None):
@@ -205,7 +220,7 @@ def generate_actions_graph(application, args, parser):
 
     process_tree = build_concept_process_tree(application)
 
-    resource_types_to_skip = filter_skipped_types(args.skip)
+    resource_types_to_skip = get_resources_to_skip(args.skip, args.keep)
 
     if args.type not in ['svg', 'pdf', 'png', 'gv']:
         exit_error("unknown output image type: {}".format(args.type), parser)
@@ -225,7 +240,7 @@ def generate_pstree_graph(application, args, parser):
     from abstractir.concept import build_concept_process_tree
     import visualize.core as viz
 
-    resource_types_to_skip = filter_skipped_types(args.skip)
+    resource_types_to_skip = get_resources_to_skip(args.skip, args.keep)
 
     process_tree = build_concept_process_tree(application)
     viz.render_pstree(process_tree, args.output_file, output_type=args.type, view=args.show,

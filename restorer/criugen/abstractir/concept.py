@@ -58,11 +58,11 @@ def _init_conceptual_process_tree(app):
     # initializing process internal private state
     p_private.init_internal_state_resources(process_tree, app)
 
-    # initializing groups
-    p_ids.init_groups_resource(process_tree, app)
-
     # initializing sessions
-    p_ids.init_sessions_resource(process_tree, app)
+    sessions_map = p_ids.init_sessions_resource(process_tree, app)
+
+    # initializing groups
+    p_ids.init_groups_resource(process_tree, app, sessions_map)
 
     # initializing pipes
     p_files.init_pipe_resources(process_tree, app)
