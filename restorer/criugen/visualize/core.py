@@ -6,6 +6,9 @@ from abstractir.actions import *
 from abstractir.pstree import ProcessTreeConcept
 from pyutils.func import update_dict
 from pyutils.graph import DirectedGraph
+import random
+import tempfile
+import os
 
 
 def render_actions_graph(actions_graph,
@@ -27,8 +30,10 @@ def render_actions_graph(actions_graph,
                                  do_cluster=do_cluster)
     if output_file:
         gv_graph.render(filename=output_file)
+
     if not output_file or view:
-        gv_graph.view()
+        tmp_file = os.path.join(tempfile.gettempdir(), "{}-act-graph".format(random.randint(1, 1000000)))
+        gv_graph.view(filename=tmp_file)
 
 
 def render_pstree(process_tree,
@@ -62,7 +67,8 @@ def render_pstree(process_tree,
     if output_file:
         gv_graph.render(filename=output_file)
     if not output_file or view:
-        gv_graph.view()
+        tmp_file = os.path.join(tempfile.gettempdir(), "{}-pstree-graph".format(random.randint(1, 1000000)))
+        gv_graph.view(filename=tmp_file)
 
 
 def render_actions_list(actions_list, output_file, type='svg', view=False, layout='LR'):
@@ -85,7 +91,8 @@ def render_actions_list(actions_list, output_file, type='svg', view=False, layou
     if output_file:
         gv_graph.render(filename=output_file)
     if not output_file or view:
-        gv_graph.view()
+        tmp_file = os.path.join(tempfile.gettempdir(), "{}-actlist-graph".format(random.randint(1, 1000000)))
+        gv_graph.view(filename=tmp_file)
 
 
 def render_actions_cycle(cycle, output_file, type, view):
@@ -98,7 +105,8 @@ def render_actions_cycle(cycle, output_file, type, view):
     if output_file:
         gv_graph.render(filename=output_file)
     if not output_file or view:
-        gv_graph.view()
+        tmp_file = os.path.join(tempfile.gettempdir(), "{}-actcycle-graph".format(random.randint(1, 1000000)))
+        gv_graph.view(filename=tmp_file)
 
 
 def _init_common_graphviz_graph(g_format='svg', rankdir_layout='LR', engine='dot'):
