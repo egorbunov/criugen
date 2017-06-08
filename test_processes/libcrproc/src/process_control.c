@@ -85,6 +85,10 @@ void deinit_process_contol() {
 	log_info("Destroying process control");
 
 	for (int i = 0; i < g_connections_cnt; ++i) {
+		if (g_slave_connections[i].connected_pid < 0) {
+			continue;
+		}
+
 		if (finalize_connection(g_slave_connections[i].sock_fd) < 0) {
 			log_sys_error("Failed to fianlize (%d, %d)", g_slave_connections[i].connected_pid, g_slave_connections[i].sock_fd);
 			res = -1;
@@ -230,6 +234,8 @@ int pc_finish(int executor_pid) {
 		log_sys_error("Can't recv response");
 		return -1;
 	}
+
+	// TODO: remove connection
 
 	return response;
 }

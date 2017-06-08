@@ -23,6 +23,7 @@ def perform_process_tree_closure(process_tree):
     _close_against_dependencies(process_tree)
     _close_against_inheritance(process_tree)
     _close_against_multi_handle_resources(process_tree)
+
     _make_creators_handle_the_resource_they_create(process_tree)
 
 
@@ -44,24 +45,15 @@ def _close_against_dependencies(process_tree):
 
 
 def _close_against_dependencies_one_creator(creator_process, resource):
-    resources_to_check = {resource}  # type: set[ResourceConcept]
+    dependencies_to_check = resource.dependencies  # type: set[tuple[ResourceConcept, type]]
 
-    while len(resources_to_check) > 0:
-        next_to_check = set()
+    # need to check not recursively, because this process may not be creator
+    # of dependencies
+    for d, handle_type in dependencies_to_check:
+        if creator_process.has_resource_at_handle_type(d, handle_type):
+            continue
 
-        for r in resources_to_check:
-            # retrieving dependencies, which are not handled by creator
-            not_in_process = set((dep_r, handle_type) for (dep_r, handle_type) in r.dependencies
-                                 if not creator_process.has_resource_at_handle_type(dep_r, handle_type))
-
-            # adding those dependencies if needed
-            for (d, handle_type) in not_in_process:
-                creator_process.add_tmp_resource_with_auto_handle(d, handle_type)
-
-            # now we need to check dependencies of those dependencies!
-            next_to_check |= set(r for r, h in not_in_process)  # TODO: maybe make it more efficient
-
-        resources_to_check = next_to_check
+        creator_process.add_tmp_resource_with_auto_handle(d, handle_type)
 
 
 def _close_against_inheritance(process_tree):

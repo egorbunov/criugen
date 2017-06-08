@@ -13,7 +13,7 @@ def get_resource_creator(process_tree, resource):
            
         2) If resource is shared via forking then creator is the process, which
            is topmost in the process tree (closest to the root). 
-           WARNING: if such resource has more than one handle, then we do not 
+           WARNING: if such resource has more than one handle, then we do not
            support it for now and exception is thrown!
            
         3) If resource is private it has only one possible creator which is
