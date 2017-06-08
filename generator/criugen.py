@@ -6,8 +6,8 @@ import json
 import sys
 
 from abstractir.resource_concepts import *
-from model import loader
-from model.crdata import Application
+from crloader import loader
+from crloader.crdata import Application
 
 PROGRAM_NAME = "criugen.py"
 
