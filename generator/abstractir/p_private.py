@@ -4,7 +4,7 @@ internal process state, vm info, page map
 """
 
 from resource_concepts import ProcessInternalsConcept
-from model import crdata
+from crloader import crdata
 from pstree import ProcessTreeConcept
 import resource_handles
 

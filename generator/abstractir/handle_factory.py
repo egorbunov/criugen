@@ -135,7 +135,7 @@ def make_handle_factories_map_for_process():
     """ Constructs map from handle type to proper handle factory,
     which is made for one signle process; Created handle factories
     ensure handle generation logic to be consistent with out process
-    resources model, for example we have different handles: FileDescriptor,
+    resources crloader, for example we have different handles: FileDescriptor,
     PipeWriteHandle, PipeReadHandle, which are not equal as types, but
     they all share single file descriptor namespace, so if there are pipe
     read handle with fd = 5 you can't return free FileDescriptor handle with

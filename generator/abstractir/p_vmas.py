@@ -3,8 +3,8 @@ Initialization of resource pairs for virtual memory; Functions here are intended
 to properly setup VMA resource concepts with correct dependencies
 """
 
-from model import crdata
-from model.crconstants import *
+from crloader import crdata
+from crloader.crconstants import *
 from pstree import ProcessTreeConcept
 from resource_concepts import SharedMemConcept, RegularFileConcept, VMAConcept
 from process_concept import ProcessConcept

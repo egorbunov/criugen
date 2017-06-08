@@ -6,7 +6,7 @@ any specific resource details.
 
 from abc import ABCMeta, abstractproperty, abstractmethod
 import resource_handles
-import model.crdata as crdata
+import crloader.crdata as crdata
 import resource_adapters
 import process_concept
 from trivial_resources import *
@@ -46,7 +46,7 @@ class ResourceConcept(object):
         return self._payload
 
     def add_dependency(self, resource, handle_type):
-        """ Adds dependency of the resource. So in our model resource may
+        """ Adds dependency of the resource. So in our crloader resource may
         depend on other resource with specifically typed handle to it. For example
         VMA may depend on (file, FileDescriptor). That is it for now.
         
@@ -89,7 +89,7 @@ class ResourceConcept(object):
 
     @abstractproperty
     def handle_types(self):
-        """ Be sure to make all handle types distinct, because out model
+        """ Be sure to make all handle types distinct, because out crloader
         is made so multi-handle resources (like pipe) must have distinct by type
         handles (that is not about possibility to point to resource with many handles
         in one process)

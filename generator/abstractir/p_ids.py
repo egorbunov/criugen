@@ -2,7 +2,7 @@
 Initialization of credential resources: groups, sessions, user ids and so on
 """
 
-from model import crdata
+from crloader import crdata
 from pstree import ProcessTreeConcept
 from resource_concepts import ResourceConcept, ProcessGroupConcept, ProcessSessionConcept
 from resource_handles import *

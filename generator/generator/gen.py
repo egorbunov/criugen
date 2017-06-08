@@ -1,4 +1,4 @@
-from model import crdata
+from crloader import crdata
 from abstractir import actions_program
 
 

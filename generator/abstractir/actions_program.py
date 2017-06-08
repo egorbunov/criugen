@@ -2,7 +2,7 @@
 """
 
 import actgraph_build
-import model.crdata as crdata
+import crloader.crdata as crdata
 import concept
 from pyutils import graph
 

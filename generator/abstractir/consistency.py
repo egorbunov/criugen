@@ -5,7 +5,7 @@ one process simultaneously.
 from resource_concepts import *
 from resource_handles import *
 from process_concept import ProcessConcept
-import model.crdata as crdata
+import crloader.crdata as crdata
 from handle_factory import is_fd_handle, get_int_from_fd_handle
 
 

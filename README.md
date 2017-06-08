@@ -1,7 +1,7 @@
 ## Generator
 
-see `criugen` dir
+see `generator` directory
 
 ## Interpreter
 
-see `interpreter` dir
+see `interpreter` directory

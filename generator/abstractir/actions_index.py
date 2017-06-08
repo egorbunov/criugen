@@ -111,7 +111,7 @@ class ActionsIndex(object):
         """
         acts_to_check = self._obtain_actions_by_proc[process]
         for a in acts_to_check:
-            # resource action can only be Create action or Share action!
+            # obtain resource action can only be Create action or Share action!
 
             if isinstance(a, CreateResourceAction) \
                     and a.process == process \

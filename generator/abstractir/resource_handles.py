@@ -40,7 +40,7 @@ Warning: all handles must be comparable in terms of value, not reference;
 
 import collections
 
-# Almost every resource in our model is accessed via file descriptor:
+# Almost every resource in our crloader is accessed via file descriptor:
 #     - regular file
 #     - pipe
 #     - socket

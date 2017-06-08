@@ -3,7 +3,7 @@
 
 import abstractir.actions
 import abstractir.resource_concepts as rc
-from model import crdata
+from crloader import crdata
 from abstractir.resource_handles import NO_HANDLE
 
 

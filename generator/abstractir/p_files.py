@@ -2,12 +2,12 @@
 Initialization of various file resources as concepts for middle IR
 """
 
-from model import crdata
+from crloader import crdata
 from pstree import ProcessTreeConcept
 from resource_concepts import RegularFileConcept, ResourceConcept, SharedMemConcept, PipeConcept
 from resource_adapters import PipeResource
 from resource_handles import *
-import model.crconstants as crconstants
+import crloader.crconstants as crconstants
 
 
 def init_regular_files_resources(process_tree, app):

@@ -8,7 +8,7 @@ but only with files, which are responsible for one end of a pipe)
 """
 
 from pyutils.dataclass import DataClass
-import model.crdata as crdata
+import crloader.crdata as crdata
 
 
 class PipeResource(DataClass):
