@@ -87,24 +87,35 @@ class DirectedGraph(object):
     def dfs(self, pre_visit=func.noop_fun, post_visit=func.noop_fun):
         """ Same as dfs_from, but performs dfs of the whole graph
         (all graph components). Starting vertex is not specified
+
+        pre_visit and post_visit functions are invoked for each visited
+        vertex: pre_visit right before traversing "children" of current node
+        (and before checking if it was already visited) and post_visit is
+        called right after traversing all 'children'
+
+        the same context is passed to pre_visit and post_visit functions;
+        it can be used to store dfs data, there are already context['visited']
+        map from vertex to boolean, which designates which vertices were already
+        visited
+
         """
-        is_visited = {v: False for v in self.vertices_iter}
-        for v in is_visited.keys():
-            if is_visited[v]:
+        context = {'visited': {v: False for v in self.vertices_iter}}
+        for v in context['visited'].keys():
+            if context['visited'][v]:
                 continue
-            self._dfs(v, pre_visit, post_visit, is_visited)
+            self._dfs(v, pre_visit, post_visit, context)
 
-    def _dfs(self, cur_v, pre_visit, post_visit, visited_map):
-        pre_visit(cur_v)
+    def _dfs(self, cur_v, pre_visit, post_visit, context):
+        pre_visit(context, cur_v)
 
-        if visited_map[cur_v]:
+        if context['visited'][cur_v]:
             return
-        visited_map[cur_v] = True
+        context['visited'][cur_v] = True
 
         for v in self._adjacency_list[cur_v]:
-            self._dfs(v, pre_visit, post_visit, visited_map)
+            self._dfs(v, pre_visit, post_visit, context)
 
-        post_visit(cur_v)
+        post_visit(context, cur_v)
 
 
 class GraphIsNotAcyclic(Exception):
@@ -123,13 +134,49 @@ def topological_sort(graph):
     """
     sorted_actions = []
 
+    def post_visit(context, vertex):
+        sorted_actions.append(vertex)
+
+    top_sort_dfs = _dfs_stack(_cycle_search_dfs(),
+                              post_visit=post_visit)
+    # run dfs
+    top_sort_dfs(graph)
+
+    return reversed(sorted_actions)
+
+
+def bucket_top_sort(graph):
+    level_buckets = {}
+
+    def pre_visit(context, vertex):
+        if context['visited'][vertex]:
+            return
+
+        cur_depth = context.setdefault('depth', -1)
+        context['depth'] = cur_depth + 1
+
+    def post_visit(context, vertex):
+        level_buckets.setdefault(context['depth'], list()).append(vertex)
+        context['depth'] -= 1
+
+    bucket_top_sort_dfs = _dfs_stack(_cycle_search_dfs(),
+                                     pre_visit=pre_visit,
+                                     post_visit=post_visit)
+
+    # running dfs
+    bucket_top_sort_dfs(graph)
+
+    return level_buckets
+
+
+def _cycle_search_dfs():
     no_color = 0
     entered_color = 1
     exited_color = 2
     vertex_color = {}
     vertex_stack = []
 
-    def pre_visit(vertex):
+    def pre_visit(context, vertex):
         cur_color = vertex_color.setdefault(vertex, no_color)
 
         if cur_color == entered_color:
@@ -145,12 +192,51 @@ def topological_sort(graph):
 
         vertex_color[vertex] = entered_color
 
-    def post_visit(vertex):
+    def post_visit(context, vertex):
         vertex_stack.pop()
-
-        sorted_actions.append(vertex)
         vertex_color[vertex] = exited_color
 
-    graph.dfs(pre_visit, post_visit)
+    dfs = _dfs_init()
+    return _dfs_stack(dfs, pre_visit, post_visit)
 
-    return reversed(sorted_actions)
+
+class _DfsStack(object):
+    def __init__(self):
+        self._post_visitors = []
+        self._pre_visitors = []
+
+    def add_visitors(self, pre_visit, post_visit):
+        self._pre_visitors.append(pre_visit)
+        self._post_visitors.append(post_visit)
+
+    def __call__(self, graph):
+        """
+        :type graph: DirectedGraph
+        """
+
+        def chained_pre_visit(context, cur_v):
+            for f in self._pre_visitors:
+                f(context, cur_v)
+
+        def chained_post_visit(context, cur_v):
+            for f in self._post_visitors:
+                f(context, cur_v)
+
+        graph.dfs(
+            pre_visit=chained_pre_visit,
+            post_visit=chained_post_visit
+        )
+
+
+def _dfs_stack(dfs, pre_visit=func.noop_fun, post_visit=func.noop_fun):
+    """ Add pre and post visit functions to dfs object
+    :type dfs: _DfsStack
+    """
+    dfs.add_visitors(pre_visit, post_visit)
+    return dfs
+
+
+def _dfs_init():
+    """ No operation dfs traversal
+    """
+    return _DfsStack()

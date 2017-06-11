@@ -170,6 +170,9 @@ def _get_common_styles():
             'color': 'black',
             'style': 'filled',
             'fillcolor': '#006699',
+        },
+        'edge': {
+            'color': 'black'
         }
     }
 

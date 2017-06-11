@@ -35,6 +35,14 @@ class TestDirectedGraph(unittest.TestCase):
             lst = list(g.topological_sort(graph))
             self.assertEqual(len(lst), graph.vertex_num)
 
+    def test_bucket_top_sort(self):
+        max_graph_size = 250
+        min_graph_size = 0
+
+        graph_size = random.randint(a=min_graph_size, b=max_graph_size)
+        graph = _generate_acyclic_graph(node_cnt=graph_size)
+        buckets = g.bucket_top_sort(graph)
+
 
 if __name__ == '__main__':
     unittest.main()
