@@ -52,7 +52,7 @@ def get_resource_creator(process_tree, resource):
     # means, that resource is private if we are here
     if len(holders) != 1:
         raise RuntimeError("Private resource [{}] has more than one holder".format(resource))
-    return holders[0]
+    return next(iter(holders))
 
 
 def get_creator_handles(process, resource):

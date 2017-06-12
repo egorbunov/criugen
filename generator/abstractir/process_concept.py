@@ -83,7 +83,7 @@ class ProcessConcept(object):
 
     def iter_all_resource_handle_pairs(self):
         """ Iterable over all pairs (resource, handle)
-        :rtype: collections.Iterable
+        :rtype: collections.Iterable[tuple[resource_concepts.ResourceConcept, object]]
         """
         for r in self.iter_all_resources():
             for h in self.iter_all_handles(r):
@@ -151,7 +151,6 @@ class ProcessConcept(object):
     def _set_handle_is_used(self, handle):
         handle_factory = self._handle_factories[type(handle)]
         if handle_factory.is_handle_used(handle):
-            print("Warning [but don't worry for now]: handle is already used handle: [{}]".format(handle))
             # we ignore the fact of repeated handle here; that is because
             # it can happen for tmp added resources and our algorithm can
             # deal with it
@@ -171,4 +170,15 @@ class ProcessConcept(object):
         # call resource add listener
         for rl in self._resource_listeners:
             rl.on_proc_add_resource(self, resource, handle)
+
+    def remove_resource(self, resource, handle):
+        """ Tries to remove given resource from process resources lists,
+        if no such resource, handle pair, KeyError is raised
+        """
+        all_handles = self._all_resources[resource]  # type: set
+        all_handles.remove(handle)
+
+        if self.is_tmp_resource(resource, handle):
+            tmp_handles = self._tmp_resources[resource]  # type: set
+            tmp_handles.remove(handle)
 

@@ -20,17 +20,17 @@ class CreateResourceAction(DataClass):
 
 
 class ShareResourceAction(DataClass):
-    process_from = "process, which has the (resource, handle_from) in it"
-    process_to =  "process, with which resource is shared"
-    resource = "resource, which is being shared"
+    process_from = "process, which has the (resource, handle_from) in it"  # type: process_concept.ProcessConcept
+    process_to = "process, with which resource is shared"  # type: process_concept.ProcessConcept
+    resource = "resource, which is being shared"  # type: resource_concepts.ResourceConcept
     handle_from = "handle of the resource in the process, which has the resource"
     handle_to = "handle, which is going to point to the resource after " \
                 "share action within `process_to` process"
 
 
 class RemoveResourceAction(DataClass):
-    process = "process, which executes the action of removing the resource"
-    resource = "resource, handle to which is being removed from the process"
+    process = "process, which executes the action of removing the resource"  # type: process_concept.ProcessConcept
+    resource = "resource, handle to which is being removed from the process"  # type: resource_concepts.ResourceConcept
     handle = "handle, which is being released, so (resource, handle) pair " \
              "is removed from `process` as an effect of this action"
 
