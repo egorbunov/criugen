@@ -25,6 +25,7 @@ def build_actions_graph(process_tree, resource_types_to_skip=()):
            types, which are subtypes of ResourceConcept
     :type resource_types_to_skip: tuple[type]
     :return: actions graph
+    :rtype: DirectedGraph
     """
     actions_index = ActionsIndex()
     actions_graph_proxy = ActionsFilteringGraph(resource_types_to_skip)
@@ -90,7 +91,9 @@ def _fill_actions_graph_and_index(process_tree, acts_index, acts_graph):
 
 
 def _build_all_precedence_edges(process_tree, actions_index, actions_graph):
-    """
+    """ TODO: refine complexity, IDEA: each generation step can generate O(action num) edges ==>
+              whole algo is O(action num) (almost whole, except last quadratic step)
+
     :type process_tree: ProcessTreeConcept
     :type actions_index: ActionsIndex
     :type actions_graph: DirectedGraph
@@ -102,6 +105,8 @@ def _build_all_precedence_edges(process_tree, actions_index, actions_graph):
     _ensure_inherited_resource_created_before_fork(actions_index, actions_graph)
     _ensure_inherited_resource_removed_after_fork(actions_index, actions_graph)
     _ensure_dependencies_created_before_used(actions_index, actions_graph)
+    _ensure_not_needed_resources_not_inherited(actions_index, actions_graph)
+
     _ensure_consistency(process_tree, actions_index, actions_graph)
 
 
@@ -382,6 +387,32 @@ def _ensure_consistency_one_process(process, actions_index, actions_graph):
             # (r_from, h_from) and (r_to, h_to) are conflicting resources!
             obtain_next = actions_index.process_obtain_resource_action(process, r_to, h_to)
             _add_precedence_edges_from_to([remove_prev], [obtain_next], actions_graph)
+
+
+def _ensure_not_needed_resources_not_inherited(actions_index, actions_graph):
+    """ Adds edges, which ensure, that create action for resources, which
+    does not needed to be inherited, but has is_inherited property, are performed
+    after forks actions
+
+    :type actions_index: ActionsIndex
+    :type actions_graph: DirectedGraph
+    """
+    for cr_act in actions_index.create_actions:
+        creator = cr_act.process
+        creator_forks_actions = list(fa for fa in actions_index.fork_actions if fa.parent == creator)
+
+        if cr_act.resource.is_sharable or not cr_act.resource.is_inherited:
+            _add_precedence_edges_from_to(creator_forks_actions, [cr_act], actions_graph)
+            continue
+
+        # inherited resource
+        # TODO: multi handle resources inheritance! Think of it
+        fork_acts_which_not_share = (
+            fa for fa in creator_forks_actions
+            if not fa.child.has_resource_at_handle(cr_act.resource, cr_act.handles[0])
+        )
+
+        _add_precedence_edges_from_to(fork_acts_which_not_share, [cr_act], actions_graph)
 
 
 def _get_rh_pair_priority(process, resource_handle):

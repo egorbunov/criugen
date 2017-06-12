@@ -247,6 +247,11 @@ def generate_actions_graph(application, args, parser):
 
     graph = build_actions_graph(process_tree, tuple(resource_types_to_skip))
 
+    print("Graph built.")
+    print("Total vertices = {}".format(graph.vertex_num))
+    print("Total edges    = {}".format(graph.edges_num))
+    print("")
+
     if not args.sorted:
         node_buckets = None
         if args.pbuckets:

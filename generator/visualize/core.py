@@ -150,7 +150,7 @@ def _add_actions_buckets_to_graph(gv_graph, buckets):
                 gvboost.set_styles(c, _get_action_node_style(node))
                 c.node_attr.update(style='filled', color='white')
                 c.node(node_ids[node], labels.get_action_vertex_label(node))
-                
+
     return node_ids
 
 

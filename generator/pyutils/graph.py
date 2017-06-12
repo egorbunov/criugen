@@ -18,6 +18,10 @@ class DirectedGraph(object):
         return len(self._adjacency_list)
 
     @property
+    def edges_num(self):
+        return sum(len(l) for v, l in self._adjacency_list.iteritems())
+
+    @property
     def vertices_iter(self):
         return self._adjacency_list.iterkeys()
 
@@ -153,6 +157,9 @@ def topological_sort(graph):
 
 def bucket_top_sort(graph):
     """ Performs topological sort and returns level-buckets of vertices
+
+    That is totally O(|G|), i.e. linear on the size of the graph (number of edges)
+
     :type graph: DirectedGraph
     :rtype: dict[int, list[object]]
     """

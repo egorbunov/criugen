@@ -2,6 +2,7 @@
 """
 
 from pyutils.graph import DirectedGraph, bucket_top_sort, topological_sort
+from actions import *
 from itertools import chain
 
 
@@ -20,6 +21,7 @@ def sort_actions_graph(act_graph):
     """ Performs topological sort on the graph; For now it works for any graph, actually,
     without any dependency on vertex type;
 
+    FIXME: THIS TODO IS PROBABLY OUTDATED!!!!!!!!!!!!!!!!!
     TODO: we need to support priorities on actions (vertices), because we may want to have
     TODO: another properties for the sorted list, but not only it's topological order:
     TODO: * We want, that ForkAction is executed as soon as possible and we don't want
@@ -33,9 +35,16 @@ def sort_actions_graph(act_graph):
     :return: list of topologically sorted vertices (actions)
     """
 
-    sorted_actions = list(topological_sort(act_graph))
+    buckets = get_actions_buckets(act_graph)
+
+    min_depth = min(buckets)
+    max_depth = max(buckets)
+
+    def sorted_buckets_generator():
+        for depth in range(min_depth, max_depth + 1):
+            yield buckets[depth]
+
+    sorted_actions = list(chain.from_iterable(sorted_buckets_generator()))
+
     return sorted_actions
 
-
-def _action_priority(action):
-    return 0
