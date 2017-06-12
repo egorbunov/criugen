@@ -134,6 +134,9 @@ def build_parsers():
                                       help="If set, then in case --sorted option specified and graph is not\n"
                                            "acyclic, cycle is shown as drawing\n",
                                       default=False, action='store_true')
+    graph_command_parser.add_argument('--pbuckets',
+                                      help="If set, then actions are clustered by 'depth'\n",
+                                      default=False, action='store_true')
 
     # process tree visualization parser
     pstreevis_command_parser = argparse.ArgumentParser(prog="{} {}".format(PROGRAM_NAME, pstree_graph_command),
@@ -231,7 +234,7 @@ def generate_actions_graph(application, args, parser):
     """
     from abstractir.concept import build_concept_process_tree
     from abstractir.actgraph_build import build_actions_graph
-    from abstractir.actgraph_sort import sort_actions_graph
+    from abstractir.actgraph_sort import sort_actions_graph, get_actions_buckets
     from pyutils.graph import GraphIsNotAcyclic
     import visualize.core as viz
 
@@ -245,9 +248,12 @@ def generate_actions_graph(application, args, parser):
     graph = build_actions_graph(process_tree, tuple(resource_types_to_skip))
 
     if not args.sorted:
-        # just drawing graph
+        node_buckets = None
+        if args.pbuckets:
+            node_buckets = get_actions_buckets(graph)
+
         viz.render_actions_graph(graph, args.output_file, output_type=args.type, view=args.show,
-                                 layout=args.layout, do_cluster=args.cluster)
+                                 layout=args.layout, do_process_cluster=args.cluster, node_buckets=node_buckets)
     else:
         # trying to sort the graph and draw list of actions
         try:

@@ -99,23 +99,29 @@ class DirectedGraph(object):
         visited
 
         """
-        context = {'visited': {v: False for v in self.vertices_iter}}
-        for v in context['visited'].keys():
-            if context['visited'][v]:
+        self.dfs_in_order(self.vertices_iter, pre_visit, post_visit)
+
+    def dfs_in_order(self, vertices_list, pre_visit=func.noop_fun, post_visit=func.noop_fun):
+        """ See dfs doc comment, but:
+        vertices_list: list of vertices, which will be scanned left to right to perform dfs
+        """
+        visited_map = {v: False for v in self.vertices_iter}
+        for v in vertices_list:
+            if visited_map[v]:
                 continue
-            self._dfs(v, pre_visit, post_visit, context)
+            self._dfs(v, pre_visit, post_visit, visited_map)
 
-    def _dfs(self, cur_v, pre_visit, post_visit, context):
-        pre_visit(context, cur_v)
+    def _dfs(self, cur_v, pre_visit, post_visit, visited_map):
+        pre_visit(cur_v)
 
-        if context['visited'][cur_v]:
+        if visited_map[cur_v]:
             return
-        context['visited'][cur_v] = True
+        visited_map[cur_v] = True
 
         for v in self._adjacency_list[cur_v]:
-            self._dfs(v, pre_visit, post_visit, context)
+            self._dfs(v, pre_visit, post_visit, visited_map)
 
-        post_visit(context, cur_v)
+        post_visit(cur_v)
 
 
 class GraphIsNotAcyclic(Exception):
@@ -134,7 +140,7 @@ def topological_sort(graph):
     """
     sorted_actions = []
 
-    def post_visit(context, vertex):
+    def post_visit(vertex):
         sorted_actions.append(vertex)
 
     top_sort_dfs = _dfs_stack(_cycle_search_dfs(),
@@ -146,27 +152,44 @@ def topological_sort(graph):
 
 
 def bucket_top_sort(graph):
-    level_buckets = {}
+    """ Performs topological sort and returns level-buckets of vertices
+    :type graph: DirectedGraph
+    :rtype: dict[int, list[object]]
+    """
 
-    def pre_visit(context, vertex):
-        if context['visited'][vertex]:
-            return
+    # we need to check vertices in topological order
+    # if we want to correctly calculate depths
+    top_sort_order = list(topological_sort(graph))
+    vertex_index = {}
+    for idx, v in enumerate(top_sort_order):
+        vertex_index[v] = idx
 
-        cur_depth = context.setdefault('depth', -1)
-        context['depth'] = cur_depth + 1
+    depths = {}
+    # dynamically calculating depths
+    for v in top_sort_order:
+        for u in graph.vertex_neighbours(v):
+            if depths.setdefault(u, 0) < depths.setdefault(v, 0) + 1:
+                depths[u] = depths[v] + 1
 
-    def post_visit(context, vertex):
-        level_buckets.setdefault(context['depth'], list()).append(vertex)
-        context['depth'] -= 1
+    buckets = {}
+    for v, d in depths.iteritems():
+        buckets.setdefault(d, []).append(v)
 
-    bucket_top_sort_dfs = _dfs_stack(_cycle_search_dfs(),
-                                     pre_visit=pre_visit,
-                                     post_visit=post_visit)
+    return buckets
 
-    # running dfs
-    bucket_top_sort_dfs(graph)
 
-    return level_buckets
+def _bucket_top_sort_dfs(v_from, graph, vertex_priority_map, visited, depth, buckets):
+    if v_from in visited:
+        return
+
+    visited.add(v_from)
+    neighbours = graph.vertex_neighbours(v_from)
+    sorted_neigh = sorted(neighbours, key=lambda x: vertex_priority_map[x])
+
+    for u in sorted_neigh:
+        _bucket_top_sort_dfs(u, graph, vertex_priority_map, visited, depth + 1, buckets)
+
+    buckets.setdefault(depth, []).append(v_from)
 
 
 def _cycle_search_dfs():
@@ -176,7 +199,7 @@ def _cycle_search_dfs():
     vertex_color = {}
     vertex_stack = []
 
-    def pre_visit(context, vertex):
+    def pre_visit(vertex):
         cur_color = vertex_color.setdefault(vertex, no_color)
 
         if cur_color == entered_color:
@@ -192,7 +215,7 @@ def _cycle_search_dfs():
 
         vertex_color[vertex] = entered_color
 
-    def post_visit(context, vertex):
+    def post_visit(vertex):
         vertex_stack.pop()
         vertex_color[vertex] = exited_color
 
@@ -214,13 +237,13 @@ class _DfsStack(object):
         :type graph: DirectedGraph
         """
 
-        def chained_pre_visit(context, cur_v):
+        def chained_pre_visit(cur_v):
             for f in self._pre_visitors:
-                f(context, cur_v)
+                f(cur_v)
 
-        def chained_post_visit(context, cur_v):
+        def chained_post_visit(cur_v):
             for f in self._post_visitors:
-                f(context, cur_v)
+                f(cur_v)
 
         graph.dfs(
             pre_visit=chained_pre_visit,

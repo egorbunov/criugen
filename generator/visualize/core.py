@@ -12,7 +12,12 @@ import os
 
 
 def render_actions_graph(actions_graph,
-                         output_file=None, output_type='svg', view=False, layout='LR', do_cluster=False):
+                         output_file=None,
+                         output_type='svg',
+                         view=False,
+                         layout='LR',
+                         do_process_cluster=False,
+                         node_buckets=None):
     """ Renders actions graph to
 
     :param actions_graph: actions graph
@@ -20,14 +25,16 @@ def render_actions_graph(actions_graph,
     :param output_type: type of output rendered image
     :param view: is set, then drawing is shown immediately after graph generation
     :param layout: graphviz graph layout: ['LR', 'TB' ,...]
-    :param do_cluster: adds actions clusters by action executor
+    :param do_process_cluster: adds actions clusters by action executor
     :type actions_graph: DirectedGraph
+    :param node_buckets: dict from depth to list of vertices, which encodes vertices buckets
     """
 
     gv_graph = _init_common_graphviz_graph(g_format=output_type, rankdir_layout=layout)
     _fill_graphviz_graph_actions(actions_graph,
                                  gv_graph,
-                                 do_cluster=do_cluster)
+                                 do_cluster=do_process_cluster,
+                                 node_buckets=node_buckets)
     if output_file:
         gv_graph.render(filename=output_file)
 
@@ -81,7 +88,7 @@ def render_actions_list(actions_list, output_file, type='svg', view=False, layou
     :param layout: graphviz graph layout: ['LR', 'TB' ,...]
     """
     gv_graph = _init_common_graphviz_graph(g_format=type, rankdir_layout=layout)
-    node_ids = _add_actions_vertices_to_graph(gv_graph, actions_list, do_cluster=False)
+    node_ids = _add_actions_vertices_to_graph(gv_graph, actions_list, cluster_by_process=False)
 
     for i in range(len(actions_list)):
         if i == len(actions_list) - 1:
@@ -97,7 +104,7 @@ def render_actions_list(actions_list, output_file, type='svg', view=False, layou
 
 def render_actions_cycle(cycle, output_file, type, view):
     gv_graph = _init_common_graphviz_graph(g_format=type, engine='circo')
-    node_ids = _add_actions_vertices_to_graph(gv_graph, cycle, do_cluster=False)
+    node_ids = _add_actions_vertices_to_graph(gv_graph, cycle, cluster_by_process=False)
 
     for i in range(len(cycle)):
         gv_graph.edge(node_ids[cycle[i]], node_ids[cycle[(i + 1) % len(cycle)]])
@@ -116,8 +123,11 @@ def _init_common_graphviz_graph(g_format='svg', rankdir_layout='LR', engine='dot
     return graph
 
 
-def _fill_graphviz_graph_actions(actions_graph, gv_graph, do_cluster=False):
-    node_ids = _add_actions_vertices_to_graph(gv_graph, actions_graph.vertices_iter, do_cluster)
+def _fill_graphviz_graph_actions(actions_graph, gv_graph, do_cluster=False, node_buckets=None):
+    if node_buckets:
+        node_ids = _add_actions_buckets_to_graph(gv_graph, node_buckets)
+    else:
+        node_ids = _add_actions_vertices_to_graph(gv_graph, actions_graph.vertices_iter, do_cluster)
 
     for u, v in actions_graph.edges_iter:
         gv_graph.edge(node_ids[u], node_ids[v])
@@ -125,9 +135,28 @@ def _fill_graphviz_graph_actions(actions_graph, gv_graph, do_cluster=False):
     return gv_graph
 
 
-def _add_actions_vertices_to_graph(graph, vertices, do_cluster=False):
+def _add_actions_buckets_to_graph(gv_graph, buckets):
+    """ Adds bucket clusters to graph
+    :type buckets: dict[int, list[object]]
+    """
     node_ids = {}  # type: dict[object, basestring]
-    clusters = {}  # from process concept to action list
+
+    for depth, bucket in buckets.iteritems():
+        with gv_graph.subgraph(name="cluster_{}".format(depth)) as c:
+            c.attr(style='bold, dashed, rounded, filled')
+            c.attr(color='blue')
+            for idx, node in enumerate(bucket):
+                node_ids[node] = "{}_{}".format(depth, idx)
+                gvboost.set_styles(c, _get_action_node_style(node))
+                c.node_attr.update(style='filled', color='white')
+                c.node(node_ids[node], labels.get_action_vertex_label(node))
+                
+    return node_ids
+
+
+def _add_actions_vertices_to_graph(graph, vertices, cluster_by_process=False):
+    node_ids = {}  # type: dict[object, basestring]
+    process_clusters = {}  # from process concept to action list
 
     for idx, action in enumerate(vertices):
         str_id = str(idx)  # graphviz wants string -_-
@@ -135,20 +164,19 @@ def _add_actions_vertices_to_graph(graph, vertices, do_cluster=False):
 
         process = get_action_executor(action)
 
-        if do_cluster:
-            clusters.setdefault(process, []).append(action)
+        if cluster_by_process:
+            process_clusters.setdefault(process, []).append(action)
         else:
             gvboost.set_styles(graph, _get_action_node_style(action))
             graph.node(str_id, labels.get_action_vertex_label(action))
 
-    if do_cluster:
+    if cluster_by_process:
         # nodes are not added yet
-        for idx, process in enumerate(clusters.keys()):
-            print(process.minimalistic_repr)
+        for idx, process in enumerate(process_clusters.keys()):
             with graph.subgraph(name="cluster_{}".format(idx)) as c:
                 c.attr(style='bold, dashed, rounded')
                 c.attr(color='red')
-                for node in clusters[process]:
+                for node in process_clusters[process]:
                     gvboost.set_styles(c, _get_action_node_style(node))
                     c.node_attr.update(style='filled', color='white')
                     c.node(node_ids[node], labels.get_action_vertex_label(node))
