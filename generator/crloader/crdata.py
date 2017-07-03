@@ -1,3 +1,6 @@
+""" Module with raw data classes, as parsed from CRIU dump images
+"""
+
 from pyutils.dataclass import DataClass
 
 
