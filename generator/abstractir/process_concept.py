@@ -1,7 +1,7 @@
-from handle_factory import make_handle_factories_map_for_process, HandleFactory
-from itertools import chain
-from resource_listener import ProcessResourceListener
 import resource_concepts
+
+from handle_factory import make_handle_factories_map_for_process, HandleFactory
+from resource_listener import ProcessResourceListener
 
 
 class ProcessConcept(object):
@@ -28,7 +28,8 @@ class ProcessConcept(object):
         self._resource_listeners = []
 
     def add_resource_listener(self, resource_listener):
-        """
+        """ Adds listener, which is notified every time resource is added to the process
+
         :param resource_listener: listener, which is called in case 
                new resources added to the process
         :type resource_listener: ProcessResourceListener
@@ -181,4 +182,3 @@ class ProcessConcept(object):
         if self.is_tmp_resource(resource, handle):
             tmp_handles = self._tmp_resources[resource]  # type: set
             tmp_handles.remove(handle)
-
