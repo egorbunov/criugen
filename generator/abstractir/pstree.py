@@ -1,10 +1,10 @@
 from process_concept import ProcessConcept
 from resource_indexer import ResourcesIndexer
 import util
-from pyutils.graph import DirectedGraph
+from pyutils.graph import DirectedGraph, GraphInterface
 
 
-class ProcessTreeConcept(object):
+class ProcessTreeConcept(GraphInterface):
     """
     Process tree built from processes list
     """
@@ -37,6 +37,17 @@ class ProcessTreeConcept(object):
 
         for p in self._processes:
             p.add_resource_listener(self._resource_indexer)
+
+    @property
+    def edges_iter(self):
+        return ((parent, child) for parent in self.vertices_iter for child in self.vertex_neighbours(parent))
+
+    @property
+    def vertices_iter(self):
+        return iter(self.processes)
+
+    def vertex_neighbours(self, vertex):
+        return self.proc_children(vertex)
 
     @property
     def resource_indexer(self):
@@ -141,3 +152,41 @@ class ProcessTreeConcept(object):
             process_graph.add_edge(parent, p)
 
         return process_graph
+
+
+def process_tree_copy(tree, resource_types_to_skip=()):
+    """ Makes a copy or process tree with ability to skip certain resources types:
+    as a result tree is returned with processes, which contain only those resources,
+    which types are not listed in 'resource_types_to_skip' parameter.
+
+    WARNING: be careful with resource_types_to_skip parameter, because this procedure
+             performs no logical consistency checks on resulting process tree, so skipped resources
+             traces are not cleared from the resulting tree
+
+    :type tree: ProcessTreeConcept
+    :param resource_types_to_skip: tuple of resource concept types
+    :return: new process tree
+    :rtype: ProcessTreeConcept
+    """
+
+    new_processes = []
+    cur_processes = tree.processes
+
+    for p in cur_processes:
+        new_p = ProcessConcept(p.pid, p.ppid)
+
+        for r, h in p.iter_all_resource_handle_pairs():
+            if isinstance(r, resource_types_to_skip):
+                continue
+
+            if p.is_tmp_resource(r, h):
+                new_p.add_tmp_resource(r, h)
+            else:
+                new_p.add_final_resource(r, h)
+
+        new_processes.append(new_p)
+
+    return ProcessTreeConcept(new_processes)
+
+
+

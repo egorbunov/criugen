@@ -1,7 +1,24 @@
 import func
+from abc import ABCMeta, abstractmethod, abstractproperty
 
 
-class DirectedGraph(object):
+class GraphInterface(object):
+    __metaclass__ = ABCMeta
+
+    @abstractproperty
+    def vertices_iter(self):
+        pass
+
+    @abstractproperty
+    def edges_iter(self):
+        pass
+
+    @abstractmethod
+    def vertex_neighbours(self, vertex):
+        pass
+
+
+class DirectedGraph(GraphInterface):
     class NoSuchVertex(Exception):
         def __init__(self, vertex):
             super(DirectedGraph.NoSuchVertex, self).__init__("{}".format(vertex))
