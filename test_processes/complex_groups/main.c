@@ -5,7 +5,7 @@
 #include "process_control.h"
 #include "log.h"
 
-void run(void) {
+void run_criu_cannot(void) {
 	int p_0;
 	int p_1;
 	int p_2;
@@ -29,6 +29,30 @@ void run(void) {
 	pc_setpgid(p_4, 0, p_1);
 	pc_setpgid(p_1, 0, p_3);
 	pc_setpgid(p_3, 0, p_2);
+}
+
+void run_cycle(void) {
+	int p_0;
+	int p_1;
+	int p_2;
+	int p_3;
+
+	p_0 = getpid();
+	p_1 = pc_fork(p_0);
+	p_2 = pc_fork(p_1);
+	p_3 = pc_fork(p_1);
+
+	pc_setpgid(p_1, 0, 0);
+	pc_setpgid(p_2, 0, 0);
+
+	pc_setpgid(p_3, 0, p_1);
+	pc_setpgid(p_1, 0, p_2);
+	pc_setpgid(p_2, 0, p_1);
+}
+
+void run(void) {
+	run_criu_cannot();
+	// run_cycle();
 }
 
 int main(int argc, char* argv[])
