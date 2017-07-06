@@ -2,8 +2,6 @@
 """
 
 import abstractir.actions
-import abstractir.resource_concepts as rc
-from crloader import crdata
 from abstractir.resource_handles import NO_HANDLE
 
 
@@ -49,8 +47,8 @@ def _get_share_act_label(act):
             act.process_to.minimalistic_repr,
             act.handle_from, act.handle_to)
     return "<{}<BR/><B>Shares</B><BR/>{}<BR/><B>with</B><BR/>{}>".format(act.process_from.minimalistic_repr,
-                                             act.resource.minimalistic_repr,
-                                             act.process_to.minimalistic_repr)
+                                                                         act.resource.minimalistic_repr,
+                                                                         act.process_to.minimalistic_repr)
 
 
 def _get_remove_act_label(act):
@@ -59,10 +57,10 @@ def _get_remove_act_label(act):
     """
     if act.handle is not NO_HANDLE:
         return "<{}<BR/><B>Remove</B><BR/>{}<BR/><B>at</B><BR/>{}>".format(act.process.minimalistic_repr,
-                                               act.resource.minimalistic_repr,
-                                               act.handle)
+                                                                           act.resource.minimalistic_repr,
+                                                                           act.handle)
     return "<{}<BR/><B>Remove</B><BR/>{}>".format(act.process.minimalistic_repr,
-                                   act.resource.minimalistic_repr)
+                                                  act.resource.minimalistic_repr)
 
 
 def _get_fork_act_label(act):
@@ -70,4 +68,4 @@ def _get_fork_act_label(act):
     :type act: actions.ForkProcessAction
     """
     return "<{}<BR/><B>Fork</B><BR/>{}>".format(act.parent.minimalistic_repr,
-                                 act.child.minimalistic_repr)
+                                                act.child.minimalistic_repr)

@@ -3,12 +3,12 @@ from __future__ import print_function
 
 import json
 import sys
+from itertools import chain
 
-from pyutils.cmdargs import ArgParserBuilder
 from abstractir.resource_concepts import *
 from crloader import loader
 from crloader.crdata import Application
-from itertools import chain
+from pyutils.cmdargs import ArgParserBuilder
 
 PROGRAM_NAME = "criugen.py"
 
@@ -44,6 +44,12 @@ def main(args):
 
 
 def build_parsers():
+    """ Builds parsers for criugen command line utility:
+        * top level parser to parse root command
+        * dictionary from command name to corresponding command arguments parser and callback
+          function, to run after argument parsing procedure is done
+    :return:
+    """
     # all available top level commands
     generate_program_command = "program"
     generate_actions_command = "actions-ir"
@@ -101,10 +107,10 @@ def build_parsers():
         .program("{} {}".format(PROGRAM_NAME, draw_pstree_command)) \
         .build()
 
-    return command_parser, {generate_program_command: (gen_program_cmd_parser, generate_final_commands),
-                            generate_actions_command: (actions_cmd_parser, generate_intermediate_actions),
-                            draw_graph_command: (draw_graph_cmd_parser, generate_actions_graph),
-                            draw_pstree_command: (draw_pstree_cmd_parser, generate_pstree_graph)}
+    return command_parser, {generate_program_command: (gen_program_cmd_parser, run_generate_final_commands),
+                            generate_actions_command: (actions_cmd_parser, run_generate_intermediate_actions),
+                            draw_graph_command: (draw_graph_cmd_parser, run_draw_actions_graph),
+                            draw_pstree_command: (draw_pstree_cmd_parser, run_draw_pstree_graph)}
 
 
 def build_generate_program_cmd_pb():
@@ -122,9 +128,18 @@ def build_generate_actions_cmd_pb():
         .argument('-o', '--output_file',
                   help="Output json file with actions, if not specified actions are printed to stdout")
 
+
 # constants
+
 SUPPORTED_RENDER_TYPES = ['pdf', 'svg', 'png', 'gv']
-SUPPORTED_LAYOUTS_DICT = [('TB', 'from top to bottom'), ('LR', 'from left to right)')]
+
+SUPPORTED_LAYOUT_DIRECTIONS_DICT = [
+    ('TB', 'from top to bottom'),
+    ('LR', 'from left to right'),
+    ('BT', 'from bottom to top'),
+    ('RL', 'from right to left')
+]
+
 SUPPORTED_APP_RESOURCES_DICT = {
     'vmas': (VMAConcept, 'virtual memory area'),
     'pipes': (PipeConcept, 'linux pipe'),
@@ -151,8 +166,9 @@ def build_common_visualization_pb():
                   default=SUPPORTED_RENDER_TYPES[0]) \
         .argument('--layout',
                   help='Set graphviz ordering layout. Possible values are:\n' +
-                       '{}'.format("\n".join("    * {} - {}".format(t[0], t[1]) for t in SUPPORTED_LAYOUTS_DICT)),
-                  default=SUPPORTED_LAYOUTS_DICT[0][0]) \
+                       '{}'.format(
+                           "\n".join("    * {} - {}".format(t[0], t[1]) for t in SUPPORTED_LAYOUT_DIRECTIONS_DICT)),
+                  default=SUPPORTED_LAYOUT_DIRECTIONS_DICT[0][0]) \
         .argument('--skip',
                   metavar='TO_SKIP',
                   type=str,
@@ -180,7 +196,7 @@ def build_common_visualization_pb():
 
 def build_draw_graph_cmd_pb():
     return ArgParserBuilder().description('Actions graph visualization command').raw_help() \
-        .argument('--cluster',
+        .argument('--cluster_by_process',
                   help="If set, then actions are clustered by executing process",
                   default=False,
                   action='store_true') \
@@ -194,7 +210,7 @@ def build_draw_graph_cmd_pb():
                        "acyclic, cycle is shown as drawing\n",
                   default=False,
                   action='store_true') \
-        .argument('--pbuckets',
+        .argument('--cluster_by_depth',
                   help="If set, then actions are clustered by 'depth'\n",
                   default=False,
                   action='store_true')
@@ -214,13 +230,10 @@ def get_all_resources_type_names():
 
 
 def get_resources_types_to_skip(skipped_type_names, keep_type_names):
-    from itertools import chain
-
     all_type_names = set(get_all_resources_type_names())
-
-    for t in chain(skipped_type_names, keep_type_names):
-        if t not in all_type_names:
-            raise RuntimeError("Unknown resource type: {}".format(t))
+    unknown_resource = next((t for t in chain(skipped_type_names, keep_type_names) if t not in all_type_names), None)
+    if unknown_resource:
+        raise RuntimeError("Unknown resource type: {}".format(unknown_resource))
 
     skip = set(skipped_type_names)
     keep = set(keep_type_names)
@@ -242,15 +255,20 @@ def exit_error(message, print_help_parser=None):
     exit(1)
 
 
-def generate_final_commands(application, args):
-    """
+def run_generate_final_commands(application, arguments):
+    """ Invokes final restoration program generation and prints that program
+    in json format (to file or to standard output)
+
+    :param application: application to be restored (to analyze)
     :type application: Application
+    
+    :param arguments: parsed command line arguments
     """
 
     from generator import gen
     program = gen.generate_program(application)
 
-    json_out_file = args.output_file
+    json_out_file = arguments.output_file
     if json_out_file is None:
         print(json.dumps(program, sort_keys=True, indent=4, separators=(',', ': ')))
     else:
@@ -260,14 +278,15 @@ def generate_final_commands(application, args):
     raise RuntimeError("This feature is coming soon ;)")
 
 
-def generate_intermediate_actions(application, args):
-    """
+def run_generate_intermediate_actions(application, arguments):
+    """ Performs generation of intermediate actions for restoration process
     :type application: Application
+    :param arguments: parsed command line arguments
     """
     from abstractir import actions_program
     acts = actions_program.generate_actions_list(application)
 
-    json_out_file = args.output_file
+    json_out_file = arguments.output_file
     if json_out_file is None:
         print(acts)
     else:
@@ -283,9 +302,21 @@ def check_resources_keywords_list(resources):
         raise BadCommandInput("Unknown resources specified: {}".format(list(unknown_resources)))
 
 
-def generate_actions_graph(application, args):
-    """
-    :param args: parsed command arguments
+def parse_common_visualize_options(arguments):
+    import visualize.core as viz
+    return viz.VisualizeOptions(
+        output_file=arguments.output_file,
+        output_type=arguments.type,
+        do_show=arguments.show,
+        layout_dir=arguments.layout
+    )
+
+
+def run_draw_actions_graph(application, arguments):
+    """ Draws actions graph for passed application accordingly to specified
+    visualisation arguments
+
+    :param arguments: parsed command arguments
     :type application: Application
     """
     from abstractir.concept import build_concept_process_tree
@@ -294,15 +325,18 @@ def generate_actions_graph(application, args):
     from pyutils.graph import GraphIsNotAcyclic
     import visualize.core as viz
 
-    check_resources_keywords_list(chain(args.skip, args.keep))
+    check_resources_keywords_list(chain(arguments.skip, arguments.keep))
 
+    if arguments.type not in SUPPORTED_RENDER_TYPES:
+        raise BadCommandInput("unknown output image type: {}".format(arguments.type))
+    if arguments.cluster_by_process and arguments.cluster_by_depth:
+        raise BadCommandInput("can't apply clustering by process and depth together")
+    if arguments.sorted and (arguments.cluster_by_depth or arguments.cluster_by_process):
+        raise BadCommandInput("can't apply cluster options together with sorted option")
+
+    vis_opts = parse_common_visualize_options(arguments)
     process_tree = build_concept_process_tree(application)
-
-    resource_types_to_skip = get_resources_types_to_skip(args.skip, args.keep)
-
-    if args.type not in SUPPORTED_RENDER_TYPES:
-        raise BadCommandInput("unknown output image type: {}".format(args.type))
-
+    resource_types_to_skip = get_resources_types_to_skip(arguments.skip, arguments.keep)
     graph = build_actions_graph(process_tree, tuple(resource_types_to_skip))
 
     print("Graph built.")
@@ -310,43 +344,46 @@ def generate_actions_graph(application, args):
     print("Total edges    = {}".format(graph.edges_num))
     print("")
 
-    if not args.sorted:
+    if not arguments.sorted:
         node_buckets = None
-        if args.pbuckets:
+
+        if arguments.cluster_by_depth:
             node_buckets = get_actions_buckets(graph)
 
-        viz.render_actions_graph(graph, args.output_file, output_type=args.type, view=args.show,
-                                 layout=args.layout, do_process_cluster=args.cluster, node_buckets=node_buckets)
+        viz.render_actions_graph(graph,
+                                 do_process_cluster=arguments.cluster_by_process,
+                                 node_buckets=node_buckets,
+                                 vis_opts=vis_opts)
     else:
         # trying to sort the graph and draw list of actions
         try:
             sorted_actions = sort_actions_graph(graph)
-            viz.render_actions_list(sorted_actions, args.output_file,
-                                    type=args.type, view=args.show,
-                                    layout=args.layout)
+            viz.render_actions_list(sorted_actions, vis_opts=vis_opts)
 
         except GraphIsNotAcyclic as e:
             print("ERROR: actions graph is not acyclic: {}".format(e.cycle), file=sys.stderr)
 
-            if not args.show_cycle:
-                pass
+            if not arguments.show_cycle:
+                return
 
             # drawing cycle, if we got one =)
-            viz.render_actions_cycle(e.cycle, args.output_file,
-                                     type=args.type, view=args.show)
+            viz.render_actions_cycle(e.cycle, vis_opts=vis_opts)
 
 
-def generate_pstree_graph(application, args):
+def run_draw_pstree_graph(application, arguments):
     from abstractir.concept import build_concept_process_tree
+    from abstractir.pstree import process_tree_copy
     import visualize.core as viz
 
-    check_resources_keywords_list(chain(args.skip, args.keep))
+    check_resources_keywords_list(chain(arguments.skip, arguments.keep))
+    resource_types_to_skip = get_resources_types_to_skip(arguments.skip, arguments.keep)
 
-    resource_types_to_skip = get_resources_types_to_skip(args.skip, args.keep)
-
-    process_tree = build_concept_process_tree(application)
-    viz.render_pstree(process_tree, args.output_file, output_type=args.type, view=args.show,
-                      layout=args.layout, to_skip_resource_types=resource_types_to_skip, no_tmp=args.notmp)
+    vis_opts = parse_common_visualize_options(arguments)
+    process_tree = process_tree_copy(build_concept_process_tree(application), resource_types_to_skip)
+    viz.render_pstree(process_tree,
+                      vis_opts=vis_opts,
+                      skip_tmp_resources=arguments.notmp,
+                      draw_fake_root=False)
 
 
 if __name__ == "__main__":

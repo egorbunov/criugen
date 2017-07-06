@@ -27,3 +27,13 @@ def join_dicts(*args):
             continue
         new_dict.update(d)
     return new_dict
+
+
+def val_returner(val):
+    """ Returns function, which returns given value on every call
+    """
+
+    def returner(*args, **kwargs):
+        return val
+
+    return returner

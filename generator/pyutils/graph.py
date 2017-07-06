@@ -1,5 +1,6 @@
-import func
 from abc import ABCMeta, abstractmethod, abstractproperty
+
+import func
 
 
 class GraphInterface(object):
@@ -7,15 +8,41 @@ class GraphInterface(object):
 
     @abstractproperty
     def vertices_iter(self):
-        pass
+        return iter([])
 
     @abstractproperty
     def edges_iter(self):
-        pass
+        return iter([])
 
     @abstractmethod
     def vertex_neighbours(self, vertex):
-        pass
+        return []
+
+
+class VertexFilteredGraph(GraphInterface):
+    def __init__(self, graph_delegat, vertex_filter=func.val_returner(True)):
+        """ Creates graph wrapper, which filters out vertices accordingly to specified
+        filter function
+
+        :param graph_delegat: real source graph
+        :type graph_delegat: GraphInterface
+        :param vertex_filter: function, which returns True on vertices which must be
+               kept
+        """
+        super(VertexFilteredGraph, self).__init__()
+        self._graph = graph_delegat
+        self._vertex_filter = vertex_filter
+
+    @property
+    def edges_iter(self):
+        return (e for e in self._graph.edges_iter if self._vertex_filter(e[0]) and self._vertex_filter(e[1]))
+
+    def vertex_neighbours(self, vertex):
+        return [v for v in self._graph.vertex_neighbours(vertex) if self._vertex_filter(v)]
+
+    @property
+    def vertices_iter(self):
+        return (v for v in self._graph.vertices_iter if self._vertex_filter(v))
 
 
 class DirectedGraph(GraphInterface):
@@ -28,6 +55,7 @@ class DirectedGraph(GraphInterface):
             super(DirectedGraph.VertexAlreadyExists, self).__init__("{}".format(vertex))
 
     def __init__(self):
+        super(DirectedGraph, self).__init__()
         self._adjacency_list = {}  # vertex --> set[vertex]
 
     @property
@@ -200,6 +228,36 @@ def bucket_top_sort(graph):
         buckets.setdefault(d, []).append(v)
 
     return buckets
+
+
+def make_cycle_graph(nodes):
+    """ Creates Directed Graph with given nodes arranged as a cycle, i.e.
+    edges added from nodes[i] to nodes[(i + 1) % len(nodes)]
+
+    :rtype: DirectedGraph
+    """
+    graph = make_chain_graph(nodes)
+    if graph:
+        graph.add_edge(nodes[-1], nodes[0])
+    return graph
+
+
+def make_chain_graph(nodes):
+    """ Creates Directed Graph with given nodes arranged as a chain, i.e.
+    edges added from nodes[i] to nodes[i + 1] if i + 1 < len(nodes)
+
+    :rtype: DirectedGraph
+    """
+    graph = DirectedGraph()
+    if not nodes:
+        return graph
+
+    graph.add_vertex(nodes[0])
+    for i in range(len(nodes) - 1):
+        graph.add_vertex(nodes[i + 1])
+        graph.add_edge(nodes[i], nodes[i + 1])
+
+    return graph
 
 
 def _bucket_top_sort_dfs(v_from, graph, vertex_priority_map, visited, depth, buckets):

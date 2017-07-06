@@ -3,18 +3,15 @@ from abstractir.resource_concepts import *
 from abstractir.resource_handles import NO_HANDLE
 
 
-def get_proc_label(process, to_skip_resource_types=(), no_tmp=False):
+def get_proc_label(process, no_tmp=False):
     """ Returns cool table lable for the process; Lable contains
     all the resources contain within this process
 
     :type process: ProcessConcept
-    :param to_skip_resource_types: list of process resource may
-           be huge, so this parameter lets you to filter out
-           some of the process resources not to include in label
+    :param no_tmp: if True, then tmp resources are not added
     """
 
-    all_resource_pairs = list((r, h) for r, h in process.iter_all_resource_handle_pairs()
-                              if not isinstance(r, to_skip_resource_types))
+    all_resource_pairs = list(process.iter_all_resource_handle_pairs())
 
     # sorting by priority
     all_resource_pairs.sort(key=lambda rh: _get_resource_types_attrs()[type(rh[0])][1])
