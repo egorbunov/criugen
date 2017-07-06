@@ -125,8 +125,8 @@ def map_vma(pid, vma_id, shmem_id=-1):
         "#command": "MAP_VMA",
         "pid": pid,
         "id": vma_id,
-        "shmem_id": shmem_id # > 0 in case if mapping is shared and anon (see create_shared_mem_file)
-                             # TODO: is it the same as shmid field in crius VMA dump entry
+        "shmem_id": shmem_id  # > 0 in case if mapping is shared and anon (see create_shared_mem_file)
+        # TODO: is it the same as shmid field in crius VMA dump entry
     }
 
 

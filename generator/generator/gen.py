@@ -1,5 +1,5 @@
-from crloader import crdata
 from abstractir import actions_program
+from crloader import crdata
 
 
 def generate_program(app):

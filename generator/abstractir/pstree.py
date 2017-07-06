@@ -1,7 +1,7 @@
-from process_concept import ProcessConcept
-from resource_indexer import ResourcesIndexer
 import util
+from process_concept import ProcessConcept
 from pyutils.graph import DirectedGraph, GraphInterface
+from resource_indexer import ResourcesIndexer
 
 
 class ProcessTreeConcept(GraphInterface):
@@ -187,6 +187,3 @@ def process_tree_copy(tree, resource_types_to_skip=()):
         new_processes.append(new_p)
 
     return ProcessTreeConcept(new_processes)
-
-
-

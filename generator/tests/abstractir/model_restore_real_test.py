@@ -78,5 +78,6 @@ class TestRealProcessesModelRestore(unittest.TestCase):
     def test_simple_sessions(self):
         self._test_common("../../../test_processes/simple_session/bin/dump")
 
+
 if __name__ == '__main__':
     unittest.main()

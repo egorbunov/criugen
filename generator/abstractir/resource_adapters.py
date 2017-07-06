@@ -7,8 +7,8 @@ file resource, because if raw images it is not stored as a single resource expli
 but only with files, which are responsible for one end of a pipe)
 """
 
-from pyutils.dataclass import DataClass
 import crloader.crdata as crdata
+from pyutils.dataclass import DataClass
 
 
 class PipeResource(DataClass):

@@ -1,8 +1,9 @@
 """ Actions generation (just actions as vertices of the actions graph)
 """
 import itertools
-from actions import *
+
 import creators
+from actions import *
 from resource_indexer import ResourcesIndexer
 
 

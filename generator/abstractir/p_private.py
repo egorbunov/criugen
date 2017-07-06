@@ -3,10 +3,10 @@ Initialization of private process resource concepts; by private we mean not shar
 internal process state, vm info, page map
 """
 
-from resource_concepts import ProcessInternalsConcept
+import resource_handles
 from crloader import crdata
 from pstree import ProcessTreeConcept
-import resource_handles
+from resource_concepts import ProcessInternalsConcept
 
 
 def init_internal_state_resources(process_tree, application):

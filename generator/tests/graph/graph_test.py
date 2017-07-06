@@ -1,8 +1,8 @@
 """ Out graph impl testing
 """
 
-import unittest
 import random
+import unittest
 
 import pyutils.graph as g
 

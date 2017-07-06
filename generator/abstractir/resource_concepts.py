@@ -5,10 +5,11 @@ any specific resource details.
 """
 
 from abc import ABCMeta, abstractproperty, abstractmethod
-import resource_handles
+
 import crloader.crdata as crdata
-import resource_adapters
 import process_concept
+import resource_adapters
+import resource_handles
 from trivial_resources import *
 
 

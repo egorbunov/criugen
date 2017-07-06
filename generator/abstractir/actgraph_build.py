@@ -3,13 +3,13 @@
 
 import functools
 
-from pstree import ProcessTreeConcept
-from process_concept import ProcessConcept
-from actions import *
-from pyutils.graph import DirectedGraph
 import actions_gen
-from actions_index import ActionsIndex
 import consistency
+from actions import *
+from actions_index import ActionsIndex
+from process_concept import ProcessConcept
+from pstree import ProcessTreeConcept
+from pyutils.graph import DirectedGraph
 
 
 def build_actions_graph(process_tree, resource_types_to_skip=()):
@@ -44,6 +44,7 @@ class ActionsFilteringGraph(DirectedGraph):
     has ability to filter vertices by it's type; This is very helpful
     in case we want to look at the graph manually.
     """
+
     def __init__(self, vertex_filter_type):
         """
         :param vertex_filter_type: tuple of types of actions to be filtered

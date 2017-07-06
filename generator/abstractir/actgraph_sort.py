@@ -1,10 +1,10 @@
 """ Actions graph topological sorting
 """
 
-from pyutils.graph import DirectedGraph, bucket_top_sort, topological_sort
-from actions import *
 from itertools import chain
+
 from model_interpreter import *
+from pyutils.graph import DirectedGraph, bucket_top_sort
 
 
 def get_actions_buckets(act_graph):

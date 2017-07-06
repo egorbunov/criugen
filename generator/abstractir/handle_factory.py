@@ -5,8 +5,8 @@ within one process. That is why we introduce handle factories for different type
 in this file.
 """
 
-from abc import ABCMeta, abstractmethod
 import sys
+from abc import ABCMeta, abstractmethod
 from functools import partial
 
 from resource_handles import *

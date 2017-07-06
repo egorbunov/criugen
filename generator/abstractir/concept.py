@@ -1,17 +1,15 @@
 """ Functions, which sum up process tree model (concept) creation
 """
 
-import crloader.crdata as crdata
-from pstree import ProcessTreeConcept
-from process_concept import ProcessConcept
-from resource_concepts import ResourceConcept
 import closure
-import util
+import crloader.crdata as crdata
 import p_files
+import p_ids
 import p_private
 import p_vmas
-import p_ids
-from resource_indexer import ResourcesIndexer
+import util
+from process_concept import ProcessConcept
+from pstree import ProcessTreeConcept
 
 
 def build_concept_process_tree(app):

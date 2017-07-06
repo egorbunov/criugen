@@ -4,9 +4,8 @@
 Simple immutable data classes in python
 """
 
-
-import itertools
 import collections
+import itertools
 import warnings
 
 

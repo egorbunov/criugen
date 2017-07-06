@@ -1,5 +1,5 @@
-from abstractir.process_concept import ProcessConcept
 from abstractir.actions import *
+from abstractir.process_concept import ProcessConcept
 
 
 class ResourceDoesNotExist(Exception):
@@ -133,4 +133,3 @@ class ModelInterpreter(object):
             raise ResourceDoesNotExist(action, (action.resource, action.handle))
 
         executor.remove_resource(action.resource, action.handle)
-

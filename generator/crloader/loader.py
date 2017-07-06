@@ -1,12 +1,13 @@
 import glob
 import itertools
 import json
-
 import os
+
 import pycriu
 
 import crconstants
 import crdata
+
 # from resource_handles import *
 
 # resource ids generator
@@ -144,7 +145,7 @@ def _parse_sigacts(task_core):
             flags=e['flags'],
             restorer=e['restorer'],
             mask=e['mask'],
-            compat_sigaction= e["compat_sigaction"]
+            compat_sigaction=e["compat_sigaction"]
         )
         for e in task_core['sigactions']
     ]

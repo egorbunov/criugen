@@ -1,10 +1,9 @@
 """ High-order actions description
 """
 
-from collections import namedtuple
-from pyutils.dataclass import DataClass
 import process_concept
 import resource_concepts
+from pyutils.dataclass import DataClass
 
 
 class ForkProcessAction(DataClass):

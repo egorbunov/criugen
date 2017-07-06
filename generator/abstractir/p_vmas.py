@@ -3,12 +3,12 @@ Initialization of resource pairs for virtual memory; Functions here are intended
 to properly setup VMA resource concepts with correct dependencies
 """
 
+import resource_handles
 from crloader import crdata
 from crloader.crconstants import *
+from process_concept import ProcessConcept
 from pstree import ProcessTreeConcept
 from resource_concepts import SharedMemConcept, RegularFileConcept, VMAConcept
-from process_concept import ProcessConcept
-import resource_handles
 
 
 def init_shared_vma_resources(process_tree, app, shmem_map, regfile_map):

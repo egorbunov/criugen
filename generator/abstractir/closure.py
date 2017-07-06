@@ -5,10 +5,10 @@
 * multi-handle resources
 """
 
+import creators
+import util
 from pstree import ProcessTreeConcept
 from resource_concepts import ResourceConcept
-import util
-import creators
 
 
 def perform_process_tree_closure(process_tree):

@@ -1,8 +1,8 @@
+import resource_handles
+import util
+from process_concept import ProcessConcept
 from pstree import ProcessTreeConcept
 from resource_concepts import ResourceConcept
-from process_concept import ProcessConcept
-import util
-import resource_handles
 
 
 def get_resource_creator(process_tree, resource):

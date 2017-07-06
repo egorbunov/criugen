@@ -57,6 +57,8 @@ NO_HANDLE = "NOHANDLE"
 
 class __ImpossibleHandle(object):
     pass
+
+
 IMPOSSIBLE_HANDLE = __ImpossibleHandle()
 
 # Handle to input side of the pipe

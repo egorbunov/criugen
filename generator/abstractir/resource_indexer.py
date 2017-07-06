@@ -1,6 +1,6 @@
 from process_concept import ProcessConcept
-from resource_listener import ProcessResourceListener
 from resource_concepts import ResourceConcept
+from resource_listener import ProcessResourceListener
 
 
 class ResourcesIndexer(ProcessResourceListener):
