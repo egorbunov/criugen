@@ -25,28 +25,33 @@ Read help for the `criugen` utility: `./criugen.py -h`. Example usage:
   
 * Generate program for interpreter (final restoration program):
     ```bash
-    ./criugen.py -d /path/to/process/dump -o program.json
+    ./criugen.py program -d /path/to/process/dump -o program.json
     ```
 * Generate Intermediate abstract actions for restoration (using json dump files as example) and
  print them to the stdout:
     ```bash
-    ./criugen.py -d /path/to/process/jsondump --json_img
+    ./criugen.py actions-ir  -d /path/to/process/jsondump --json_img
     ```
     
-* Render intermediate representation actions graph, which does not contains actions with Virtual Memory Area resources 
-and shows rendered immediately and also saves render to file
+* Visualize intermediate representation actions graph, which does not contain actions with Virtual Memory Area resources;
+  This command execution also shows render immediately and also saves it to specified (`-o` option) file
     ```bash
-    ./criugen.py -d /path/to/process/dump --skip vmas --type pdf --show -o /tmp/mygraph
+    ./criugen.py actions-graph -d /path/to/process/dump --skip vmas --type pdf --show -o /tmp/mygraph
     ```
     
-* Render intermediate actions (ordered) list:
+* Visualize intermediate actions (ordered) list:
     ```bash
-    ./criugen.py -d /path/to/process/dump --sorted --type pdf --show -o /tmp/actlist
+    ./criugen.py actions-graph -d /path/to/process/dump --sorted --type pdf --show -o /tmp/actlist
+    ```
+
+* Visualize initial process tree with resources
+    ```bash
+    ./criugen.py pstree -d /path/to/process/dump --notmp
     ```
 
 ## Requirements
 
 As mentioned above you will need `crit`, it is essential. Also, if you want to
-use graph rendering you will have to install next dependencies:
+use actions graph or process tree visualization you will have to install next dependencies:
 
 * `graphviz` (use `pip install graphviz` after `apt install graphviz` or whatever on your system)
